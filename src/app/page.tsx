@@ -59,7 +59,7 @@ export default function Home() {
       <section className="relative z-10 mx-auto max-w-3xl text-center animate-fade-in-up">
         <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-small font-medium text-primary">
           <Sparkles className="size-4" aria-hidden="true" />
-          Your AI career and learning companion
+          Your career and learning companion
         </div>
 
         <h1 className="text-h1 text-foreground sm:text-display">
