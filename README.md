@@ -66,6 +66,7 @@ Switch between light, dark and your system setting at any time. Everything you w
 - [Node.js](https://nodejs.org) 20.9 or newer (Node 24 LTS recommended). It includes `npm`.
 - [Git](https://git-scm.com).
 - An AI provider for the AI features: an OpenAI or Anthropic API key, or Ollama (cloud or running on your computer). You add it inside the app.
+- Optional: a [Tavily](https://tavily.com) API key for web search. Tavily has a free plan; sign up and copy the key from your Tavily dashboard. With a key, Teach Me adds web sources to your journeys and lessons, finds learning material on your topic and checks facts against the web. Without one, everything still works: lessons are built from your uploaded documents and the AI alone, with no web sources or fact checks.
 
 ## Set up on a new computer
 
@@ -93,6 +94,12 @@ Run these in a terminal (on Windows: PowerShell, Command Prompt or Git Bash).
    ```
 
    On Windows Command Prompt use `copy .env.example .env.local` instead.
+
+   If you have a Tavily key, put it in `.env.local` like this, then restart the app if it is running:
+
+   ```bash
+   TAVILY_API_KEY=your-tavily-key
+   ```
 
 4. Create the app database (`dev.db` in the project folder):
 
