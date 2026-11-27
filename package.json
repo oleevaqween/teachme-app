@@ -67,5 +67,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "@prisma/adapter-libsql": {
+      "@libsql/client": "0.18.0"
+    }
   }
 }
