@@ -81,6 +81,7 @@ describe('lesson actions', () => {
     expect(check).toContain('one at a time');
     expect(check).toContain('what was right, what to correct, and the source');
     expect(check).toContain('summarise what the student should review');
+    expect(check).toContain('Score: N/M');
     expect(check).toContain("only from this stage's material");
   });
 });
@@ -147,6 +148,12 @@ describe('check in progress', () => {
     expect(checkInProgress([...lesson, learner('Check my understanding.'), ...replies, tutor('Summary: review the Consulted role.')])).toBe(false);
   });
 
+  it('is false once the scored summary arrives, even before 5 replies', () => {
+    const started = [...lesson, learner('Check my understanding.'), tutor('Question 1?'), learner('A'), tutor('Right. Question 2?'), learner('B')];
+    expect(checkInProgress(started)).toBe(true);
+    expect(checkInProgress([...started, tutor('Review the Consulted role.\n\nScore: 1/2')])).toBe(false);
+  });
+
   it('is false after another button interrupts it', () => {
     const started = [...lesson, learner('Check my understanding.'), tutor('Question 1: who signs off the work?')];
     for (const line of ['Explain that more simply.', 'Give me an example.', 'Walk me through it step by step.', 'How does this apply at work?', 'How does this apply at work, for a Project Manager role?']) {
@@ -165,5 +172,6 @@ describe('check in progress', () => {
     expect(CHECK_CONTINUE_INSTRUCTION).toContain("latest message as their answer");
     expect(CHECK_CONTINUE_INSTRUCTION).toContain('ask the next short question');
     expect(CHECK_CONTINUE_INSTRUCTION).toContain('summarise what they should review');
+    expect(CHECK_CONTINUE_INSTRUCTION).toContain('Score: N/M');
   });
 });

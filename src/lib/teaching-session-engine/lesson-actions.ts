@@ -3,6 +3,8 @@
 // Client-safe: the lesson buttons, the line each one saves as the learner's
 // message, and the fixed instruction the server adds to the grounded prompt.
 
+import { CHECK_SCORE_RULE, parseCheckScore } from './check-score';
+
 /** Every lesson button, in the order they are shown. */
 export const LESSON_ACTIONS = ['simpler', 'example', 'steps', 'work', 'check'] as const;
 
@@ -89,6 +91,7 @@ export function lessonActionInstruction(action: LessonAction, role?: string | nu
         'Ask 3 or 4 short questions in total, one at a time: ask only the first question now, then stop and wait for the answer.',
         'After each answer, give brief feedback: what was right, what to correct, and the source it comes from; then ask the next question.',
         'After the last answer, summarise what the student should review.',
+        CHECK_SCORE_RULE,
         "Take every question only from this stage's material in the context above.",
       ].join(' ');
   }
@@ -103,6 +106,7 @@ export const CHECK_CONTINUE_INSTRUCTION = [
   "Treat the student's latest message as their answer to your last question and assess it briefly: what was right, what to correct, and the source it comes from.",
   'Then ask the next short question, one at a time; ask 3 or 4 questions in total.',
   'After the student has answered the last question, summarise what they should review instead of asking another one.',
+  CHECK_SCORE_RULE,
   "Take every question only from this stage's material in the context above.",
 ].join(' ');
 
@@ -114,9 +118,24 @@ function isOtherButtonLine(content: string): boolean {
 }
 
 /**
+ * How many assistant replies follow the most recent "Check my understanding." line (each asks at most one
+ * question), or 0 when the history has none. Used to reject a score total larger than the questions asked.
+ */
+export function checkRepliesSoFar(history: readonly { role: 'user' | 'assistant'; content: string }[]): number {
+  const checkLine = lessonActionLine('check');
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === 'user' && history[i].content.trim() === checkLine) {
+      return history.slice(i + 1).filter((m) => m.role === 'assistant').length;
+    }
+  }
+  return 0;
+}
+
+/**
  * Whether the saved stage history (oldest first) has a check in progress: the most recent
  * "Check my understanding." learner line exists, fewer than CHECK_MAX_REPLIES assistant replies
- * follow it, and no other button line came after it. Nothing extra is stored; the history decides.
+ * follow it, none of them is the scored summary ("Score: N/M"), and no other button line came after it.
+ * The history decides.
  */
 export function checkInProgress(history: readonly { role: 'user' | 'assistant'; content: string }[]): boolean {
   const checkLine = lessonActionLine('check');
@@ -129,6 +148,8 @@ export function checkInProgress(history: readonly { role: 'user' | 'assistant'; 
   }
   if (start < 0) return false;
   const after = history.slice(start + 1);
-  if (after.filter((m) => m.role === 'assistant').length >= CHECK_MAX_REPLIES) return false;
+  const replies = after.filter((m) => m.role === 'assistant');
+  if (replies.length >= CHECK_MAX_REPLIES) return false;
+  if (replies.some((m) => parseCheckScore(m.content))) return false;
   return !after.some((m) => m.role === 'user' && isOtherButtonLine(m.content));
 }

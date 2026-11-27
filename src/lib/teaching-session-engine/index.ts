@@ -10,7 +10,8 @@ import { searchWeb } from '@/lib/information-validator/web-search';
 import { detectMessageIntent } from './intent-detector';
 import { formatTeachingStreamError } from './stream-protocol';
 import { LESSON_STYLE_RULE, removeEmDashes } from './lesson-style';
-import { CHECK_CONTINUE_INSTRUCTION, checkInProgress, lessonActionInstruction, type LessonAction } from './lesson-actions';
+import { CHECK_CONTINUE_INSTRUCTION, checkInProgress, checkRepliesSoFar, lessonActionInstruction, type LessonAction } from './lesson-actions';
+import { isMissingCheckResultTable, parseCheckScore } from './check-score';
 
 // Re-export shared types and functions for server-side consumers
 export { assessStageCompletion } from './shared';
@@ -97,6 +98,24 @@ function extractSourcesFromResponse(
   }
 
   return sources;
+}
+
+/**
+ * Saves the score of a check round when this reply is its scored summary ("Score: N/M" as its last line,
+ * with a total no larger than the questions asked so far).
+ * Never fails the lesson: a database without the CheckResult table is skipped silently and any
+ * other error is only logged, since the reply itself is already saved.
+ */
+async function recordCheckScore(params: { stageId: string; journeyId: string; messageId?: string; reply: string; questionsAsked: number }) {
+  const score = parseCheckScore(params.reply, params.questionsAsked);
+  if (!score || !params.messageId) return;
+  try {
+    await prisma.checkResult.create({
+      data: { stageId: params.stageId, journeyId: params.journeyId, messageId: params.messageId, ...score },
+    });
+  } catch (error) {
+    if (!isMissingCheckResultTable(error)) console.error('Check score could not be saved:', error);
+  }
 }
 
 /**
@@ -236,7 +255,7 @@ export function createTeachingStream(
           groundedPrompt.webSources
         );
 
-        await prisma.teachingMessage.create({
+        const savedReply = await prisma.teachingMessage.create({
           data: {
             stageId,
             journeyId,
@@ -248,6 +267,17 @@ export function createTeachingStream(
             messageType: action || continuingCheck ? 'qa' : detectMessageIntent(message),
           },
         });
+
+        // Only a reply that continues a check can be its summary; the reply to the button itself asks question 1.
+        if (continuingCheck) {
+          await recordCheckScore({
+            stageId,
+            journeyId,
+            messageId: savedReply?.id,
+            reply: completedText,
+            questionsAsked: checkRepliesSoFar(conversationHistory),
+          });
+        }
 
         controller.close();
       } catch (error) {

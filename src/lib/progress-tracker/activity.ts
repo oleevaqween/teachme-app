@@ -11,6 +11,8 @@ export interface StageActivity {
   lastStudiedAt: string | null;
   /** Seconds of active study on the stage; absent counts as 0. */
   studySeconds?: number;
+  /** The stage's most recent check score; absent or null when it has none. */
+  lastCheck?: { correct: number; total: number } | null;
 }
 
 /** Activity as the journey map uses it: per-stage times plus the moment they were read. */
@@ -26,8 +28,16 @@ export interface JourneyActivity {
 export function stageActivity(
   stageIds: readonly string[],
   latest: readonly { stageId: string; at: Date | null }[],
-  study: readonly { stageId: string; seconds: number; lastStudiedAt?: Date | null }[] = []
+  study: readonly { stageId: string; seconds: number; lastStudiedAt?: Date | null }[] = [],
+  checks: readonly { stageId: string; correct: number; total: number; createdAt: Date }[] = []
 ): StageActivity[] {
+  const lastCheck = new Map<string, { correct: number; total: number; at: number }>();
+  for (const row of checks) {
+    const known = lastCheck.get(row.stageId);
+    if (!known || row.createdAt.getTime() > known.at) {
+      lastCheck.set(row.stageId, { correct: row.correct, total: row.total, at: row.createdAt.getTime() });
+    }
+  }
   const byStage = new Map(latest.map((row) => [row.stageId, row.at]));
   const studied = new Map(study.map((row) => [row.stageId, row]));
   return stageIds.map((stageId) => {
@@ -35,7 +45,13 @@ export function stageActivity(
     const row = studied.get(stageId);
     const timed = row?.lastStudiedAt ?? null;
     const at = message && timed ? (timed > message ? timed : message) : message ?? timed;
-    return { stageId, lastStudiedAt: at ? at.toISOString() : null, studySeconds: row?.seconds ?? 0 };
+    const check = lastCheck.get(stageId);
+    return {
+      stageId,
+      lastStudiedAt: at ? at.toISOString() : null,
+      studySeconds: row?.seconds ?? 0,
+      lastCheck: check ? { correct: check.correct, total: check.total } : null,
+    };
   });
 }
 
@@ -45,11 +61,17 @@ export function parseActivity(data: unknown): StageActivity[] | null {
   const stages: StageActivity[] = [];
   for (const item of (data as { stages: unknown[] }).stages) {
     if (!item || typeof item !== 'object') return null;
-    const { stageId, lastStudiedAt, studySeconds } = item as Record<string, unknown>;
+    const { stageId, lastStudiedAt, studySeconds, lastCheck } = item as Record<string, unknown>;
     if (typeof stageId !== 'string') return null;
     if (lastStudiedAt !== null && (typeof lastStudiedAt !== 'string' || Number.isNaN(Date.parse(lastStudiedAt)))) return null;
     if (studySeconds !== undefined && (typeof studySeconds !== 'number' || !Number.isFinite(studySeconds) || studySeconds < 0)) return null;
-    stages.push({ stageId, lastStudiedAt, studySeconds: studySeconds ?? 0 });
+    let check: StageActivity['lastCheck'] = null;
+    if (lastCheck !== undefined && lastCheck !== null) {
+      const { correct, total } = (typeof lastCheck === 'object' ? lastCheck : {}) as Record<string, unknown>;
+      if (!Number.isInteger(correct) || !Number.isInteger(total) || (total as number) < 1 || (correct as number) < 0 || (correct as number) > (total as number)) return null;
+      check = { correct: correct as number, total: total as number };
+    }
+    stages.push({ stageId, lastStudiedAt, studySeconds: studySeconds ?? 0, lastCheck: check });
   }
   return stages;
 }

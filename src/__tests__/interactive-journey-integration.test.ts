@@ -31,6 +31,9 @@ vi.mock('@/lib/db/client', () => ({
       upsert: vi.fn(),
       findMany: vi.fn(),
     },
+    checkResult: {
+      create: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -444,6 +447,82 @@ describe('Teaching Session Integration', () => {
         role: 'user',
         content: userMessage,
       }),
+    });
+  });
+
+  describe('check scores', () => {
+    const journeyId = 'journey-1';
+    const stageId = 'stage-1';
+    const at = new Date('2026-11-27T09:00:00.000Z');
+    const saved = (role: 'user' | 'assistant', content: string, n: number) => ({
+      id: `m${n}`, stageId, journeyId, role, content, sources: null, messageType: 'qa', createdAt: at,
+    });
+    const checkHistory = [
+      saved('assistant', 'Welcome to the stage.', 1),
+      saved('user', 'Check my understanding.', 2),
+      saved('assistant', 'Question 1: who signs off the work?', 3),
+      saved('user', 'The sponsor', 4),
+      saved('assistant', 'Not quite. Question 2: who is informed?', 5),
+    ];
+
+    async function run(history: unknown[], reply: string, message = 'Stakeholders') {
+      const { createTeachingStream } = await import('@/lib/teaching-session-engine');
+      (mockPrisma.contentChunk.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(createMockChunks(stageId, journeyId));
+      (mockPrisma.teachingMessage.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(history);
+      (mockPrisma.teachingMessage.create as ReturnType<typeof vi.fn>).mockImplementation(async ({ data }: { data: { role: string } }) =>
+        data.role === 'assistant' ? { id: 'reply-1' } : { id: 'question-1' }
+      );
+      mockStreamText.mockImplementation(() => ({ textStream: (async function* () { yield reply; })() }) as unknown as ReturnType<typeof streamText>);
+      const reader = createTeachingStream({ journeyId, stageId, message, llmProvider: mockLLMConfig }).getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      return text;
+    }
+
+    it('saves the score when a check ends with its Score line', async () => {
+      await run(checkHistory, ['Right.', '', 'Review: the sponsor role.', '', 'Score: 1/2'].join('\n'));
+      expect(mockPrisma.checkResult.create).toHaveBeenCalledWith({
+        data: { stageId, journeyId, messageId: 'reply-1', correct: 1, total: 2 },
+      });
+    });
+
+    it('saves nothing for a check reply without a Score line', async () => {
+      await run(checkHistory, 'Right. Question 3: who is consulted?');
+      expect(mockPrisma.checkResult.create).not.toHaveBeenCalled();
+    });
+
+    it('never scores the reply to the button itself, which asks question 1', async () => {
+      const { createTeachingStream } = await import('@/lib/teaching-session-engine');
+      (mockPrisma.contentChunk.findMany as ReturnType<typeof vi.fn>).mockResolvedValue(createMockChunks(stageId, journeyId));
+      (mockPrisma.teachingMessage.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([saved('assistant', 'Welcome.', 1)]);
+      (mockPrisma.teachingMessage.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'reply-1' });
+      mockStreamText.mockImplementation(() => ({ textStream: (async function* () { yield 'Question 1?\nScore: 0/4'; })() }) as unknown as ReturnType<typeof streamText>);
+      const reader = createTeachingStream({ journeyId, stageId, message: 'Check my understanding.', action: 'check', llmProvider: mockLLMConfig }).getReader();
+      while (!(await reader.read()).done) { /* drain */ }
+      expect(mockPrisma.checkResult.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a total larger than the questions asked so far', async () => {
+      await run(checkHistory, ['Review: the sponsor role.', '', 'Score: 3/4'].join('\n'));
+      expect(mockPrisma.checkResult.create).not.toHaveBeenCalled();
+    });
+
+    it('ignores a Score line outside a check', async () => {
+      await run([saved('assistant', 'Welcome.', 1)], 'Score: 3/4');
+      expect(mockPrisma.checkResult.create).not.toHaveBeenCalled();
+    });
+
+    it('still finishes the lesson normally when the database has no CheckResult table', async () => {
+      (mockPrisma.checkResult.create as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('SQLITE_ERROR: no such table: main.CheckResult'));
+      const summary = ['Review: the sponsor role.', '', 'Score: 1/2'].join('\n');
+      const text = await run(checkHistory, summary);
+      expect(text).toBe(summary);
+      expect(mockPrisma.teachingMessage.create).toHaveBeenCalledWith({ data: expect.objectContaining({ role: 'assistant' }) });
     });
   });
 

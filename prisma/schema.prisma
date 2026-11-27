@@ -72,6 +72,7 @@ model Stage {
   progress      StageProgress?
   note          StageNote?
   studyTime     StageStudyTime?
+  checkResults  CheckResult[]
 
   @@index([journeyId])
   @@unique([journeyId, order])
@@ -144,5 +145,21 @@ model StageStudyTime {
   updatedAt     DateTime  @updatedAt
   stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
+  @@index([journeyId])
+}
+
+// The score of one "Check my understanding" round, read from the AI's closing "Score: N/M" line.
+// Kept when the conversation is reset (messageId is not a foreign key), so it is a history of attempts.
+model CheckResult {
+  id        String   @id @default(cuid())
+  stageId   String
+  journeyId String
+  messageId String   @unique
+  correct   Int
+  total     Int
+  createdAt DateTime @default(now())
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
   @@index([journeyId])
 }

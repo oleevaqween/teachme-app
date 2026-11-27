@@ -94,3 +94,20 @@ describe('journey map: study time', () => {
     expect(render(progress(['completed', 'in_progress', 'locked']))).not.toContain('Time studied');
   });
 });
+
+describe('journey map: check scores', () => {
+  it('adds the last check score to the line, alone when nothing else is known', () => {
+    const scored: JourneyActivity = {
+      now: activity.now,
+      stages: [
+        { stageId: 's1', lastStudiedAt: new Date(2026, 10, 18, 9, 0).toISOString(), studySeconds: 25 * 60, lastCheck: { correct: 3, total: 4 } },
+        { stageId: 's2', lastStudiedAt: null, studySeconds: 0, lastCheck: { correct: 1, total: 3 } },
+        { stageId: 's3', lastStudiedAt: null, studySeconds: 0, lastCheck: null },
+      ],
+    };
+    const html = render(progress(['completed', 'in_progress', 'unlocked']), scored);
+    expect(html).toContain('Last studied yesterday · 25 min · Last check 3/4');
+    expect(html).toContain('>Last check 1/3<');
+    expect(html.match(/Last check/g)).toHaveLength(2);
+  });
+});
