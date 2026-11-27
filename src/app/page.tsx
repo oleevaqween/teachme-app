@@ -32,7 +32,7 @@ const destinations: {
   {
     href: "/teach-me",
     title: "Teach Me",
-    description: "Upload documents or pick a topic and get a personalised, journey-style curriculum with quizzes.",
+    description: "Upload documents or pick a topic and learn in short lessons, with notes, flashcards and quick checks.",
     icon: BookOpen,
     iconTint: "from-accent to-primary/10",
     iconColor: "text-primary",

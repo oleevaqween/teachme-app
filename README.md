@@ -1,11 +1,65 @@
 # TeachMe
 
-TeachMe is a personal app for learning and for job applications. It runs on your own computer and keeps your data there.
+TeachMe is a personal app for job hunting and for learning. It helps you build and tailor your CV, keep track of your applications, practise for interviews, and learn new topics in short lessons. It runs on your own computer and keeps your data there.
 
-- **Teach Me**: learning journeys built from your documents, with lessons, questions and quizzes.
-- **CV Studio**: build a master CV, tailor it to a job ad with evidence-checked AI suggestions, check it, and write cover letters.
-- **Applications**: track where you applied, what you sent, and your screening answers.
-- **Interview**: mock interview questions and answer practice.
+![TeachMe home page](assets/screenshots/home.png)
+
+*All screenshots use made-up sample data.*
+
+## What TeachMe does
+
+### CV Studio: one master CV, tailored for every job
+
+Keep everything you have done in one master CV, then make a tailored copy for each job you apply to.
+
+- **Edit with a live preview** of the finished CV, section by section: experience, education, skills, certifications, projects, volunteering, languages and more.
+- **Bring your existing CV** (PDF or Word) instead of starting from scratch.
+- **CV checker**: an instant score out of 100 for impact, wording, completeness, length and spelling, with specific suggestions and a button that takes you to the place to fix. It adapts to where you are applying (international/UK, Nigeria or US) and to British or American spelling.
+- **Tailor to a job ad**: paste the job description and get suggested changes that are checked against your own evidence, so nothing is invented. You accept or reject each one.
+- **Improve my CV**, keyword gaps, a cover letter and likely interview questions for each application.
+- **Design**: nine templates, a choice of colours and fonts, one or two columns.
+- **Export** to PDF, Word or plain text, and keep saved versions to go back to.
+
+![CV Studio editor with live preview](assets/screenshots/cv-studio.png)
+
+![CV checker in dark mode](assets/screenshots/cv-checker.png)
+
+### Applications: every job you are pursuing
+
+- One list of every application, whether it started in CV Studio or elsewhere, with its status (preparing, applied, interviewing, offer and so on), closing date and the CV you sent.
+- Reminders when a closing date is near or something is missing before you apply.
+- **Screening answers**: write your standard answers (notice period, salary, right to work and so on) once and reuse them.
+
+![Applications list](assets/screenshots/applications.png)
+
+### Interview: practise and get scored
+
+- **Practise for a specific CV or application**: questions based on your own experience and the job, or quick practice for any job title.
+- **Type or speak your answer.** Each answer is scored out of 10 using the STAR method (situation, task, action, result), with what to fix next time and a follow-up question, just like a real interviewer.
+- Try again, answer the follow-up, and keep your best answers in the archive.
+
+![Interview practice with STAR feedback](assets/screenshots/interview-practice.png)
+
+### Teach Me: learn any topic in short lessons
+
+- **Create a learning journey** from a topic, from your own documents (PDF, Word, EPUB, Excel, PowerPoint), or both. TeachMe splits it into stages and teaches each stage as a conversation, showing which document every answer comes from.
+- **Quick prompts** for each lesson: explain it more simply, give an example, step by step, how it applies at work, and **Check my understanding** (a short quiz that is scored and saved).
+- **Notes** for every stage, saved as you type.
+- **Flashcards**: let the AI make cards from the stage, or write your own. Review them on a spaced schedule; cards you know come back less often.
+- **Track your progress**: completed stages, study time, your last check score and cards due, all on the journey map.
+- **Due for review**: the Teach Me page reminds you which stages need another look, and you can snooze a reminder.
+
+![Teach Me page with Due for review](assets/screenshots/teach-me.png)
+
+![Journey map in dark mode](assets/screenshots/journey-map.png)
+
+![A lesson with the notes panel open](assets/screenshots/lesson-notes.png)
+
+![Flashcard review](assets/screenshots/flashcards.png)
+
+### Light and dark mode, and your data stays yours
+
+Switch between light, dark and your system setting at any time. Everything you write is stored on your computer. Only the text needed for an AI feature is sent to the AI provider you choose, and you can back up and restore your career data from **Settings**.
 
 ## What you need
 
