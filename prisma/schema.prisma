@@ -70,6 +70,7 @@ model Stage {
   chunks        ContentChunk[]
   messages      TeachingMessage[]
   progress      StageProgress?
+  note          StageNote?
 
   @@index([journeyId])
   @@unique([journeyId, order])
@@ -116,4 +117,17 @@ model StageProgress {
 
   @@index([journeyId])
   @@unique([journeyId, stageId])
+}
+
+// The learner's own notes for a stage: one notepad per stage, kept when the conversation is reset.
+model StageNote {
+  id        String   @id @default(cuid())
+  stageId   String   @unique
+  journeyId String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
 }

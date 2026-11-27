@@ -22,6 +22,8 @@ import type { Stage } from '@/lib/journey-map-generator';
 import { cn } from '@/lib/utils';
 import { READING_COLUMN as COLUMN } from './reading-width';
 import { HeaderPopover } from './HeaderPopover';
+import { StageNotes } from './StageNotes';
+import { useStageNote } from './use-stage-note';
 import { ArrowLeft, Send, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface TeachingSessionProps {
@@ -53,6 +55,7 @@ export function TeachingSession({
   const [streamingType, setStreamingType] = useState<'lecture' | 'qa'>('lecture');
   const [loadingPhrase, setLoadingPhrase] = useState<string>('');
   const [stageSources, setStageSources] = useState<StageSourceList | null>(null);
+  const note = useStageNote(journeyId, stageId);
 
   const { streamingMessage, setStreamingMessage, clearStageMessages } =
     useJourneyStore();
@@ -405,6 +408,15 @@ export function TeachingSession({
               <StageSources sources={stageSources} />
             </HeaderPopover>
           )}
+          <HeaderPopover id="lesson-notes" label="Notes">
+            <StageNotes
+              text={note.text}
+              status={note.status}
+              onChange={note.change}
+              onRetrySave={note.retrySave}
+              onReload={note.reload}
+            />
+          </HeaderPopover>
 
           <button
             onClick={handleResetConversation}
