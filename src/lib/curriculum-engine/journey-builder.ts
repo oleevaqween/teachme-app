@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import type { ContentSection } from '@/lib/document-processor';
-import type { JourneySection, SourceAttribution, VerifiedSource } from './index';
+import type { JourneySection, VerifiedSource } from './index';
 
 const MIN_SECTIONS = 5;
 const MAX_SECTIONS = 50;

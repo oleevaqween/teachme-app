@@ -167,7 +167,7 @@ export async function generateJourneyMap(
   });
 
   // Assign chunks to stages (journeyId will be set during persistence)
-  const contentChunks = await assignChunksToStages(rawChunks, stages, llmProvider);
+  const contentChunks = await assignChunksToStages(rawChunks, stages);
 
   // Step 5: Report progress - persisting
   onProgress?.({

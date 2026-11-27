@@ -1,3 +1,4 @@
+// type-guard: document colours. These are the CV's own accent palette (what the user's CV looks like), not app theme colours.
 import type { Layout } from './schema';
 import { templates } from './templates';
 

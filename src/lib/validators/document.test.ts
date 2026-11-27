@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   validateDocumentUpload,
   MAX_FILE_SIZE,
-  MAX_FILES_PER_SESSION,
   SUPPORTED_FORMATS,
 } from './document';
 

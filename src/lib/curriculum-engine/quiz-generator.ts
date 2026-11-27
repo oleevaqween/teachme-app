@@ -74,7 +74,6 @@ function distributeEvenly(sectionCount: number, quizCount: number): number[] {
 
   // If we lost points due to deduplication, fill in gaps
   if (uniquePoints.length < quizCount) {
-    const missing = quizCount - uniquePoints.length;
     const usedSet = new Set(uniquePoints);
 
     for (let i = 0; i < sectionCount && uniquePoints.length < quizCount; i++) {

@@ -52,7 +52,7 @@ export default function Home() {
         <div className="animate-float absolute left-[30%] bottom-[35%] h-3 w-3 rounded-full bg-primary/50" />
         <div className="animate-float-reverse absolute right-[35%] top-[40%] h-5 w-5 rounded-full bg-primary/30" />
         <div className="animate-float-slow absolute -right-32 -top-32 h-96 w-96 rounded-full bg-gradient-to-bl from-primary/15 to-transparent blur-2xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(180,130,50,0.04)_1px,transparent_0)] bg-[size:40px_40px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,color-mix(in_oklch,var(--primary)_4%,transparent)_1px,transparent_0)] bg-[size:40px_40px]" />
       </div>
 
       {/* Hero section */}

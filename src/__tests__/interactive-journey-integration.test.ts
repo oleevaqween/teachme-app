@@ -286,14 +286,14 @@ describe('Journey Generation Integration', () => {
       toolResults: [],
       finishReason: 'stop',
       usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof generateText>>);
     mockGenerateText.mockResolvedValueOnce({
       text: '[]',
       toolCalls: [],
       toolResults: [],
       finishReason: 'stop',
       usage: { promptTokens: 10, completionTokens: 20, totalTokens: 30 },
-    } as any);
+    } as unknown as Awaited<ReturnType<typeof generateText>>);
 
     const documents = [{
       id: 'doc-2',
@@ -359,7 +359,7 @@ describe('Teaching Session Integration', () => {
     })();
 
     mockStreamText.mockImplementation(() => {
-      return { textStream: mockTextStream } as any;
+      return { textStream: mockTextStream } as unknown as ReturnType<typeof streamText>;
     });
 
     // Execute: create the teaching stream
@@ -549,10 +549,10 @@ describe('Teaching Session Integration', () => {
       yield 'Follow-up response.';
     })();
 
-    mockStreamText.mockImplementation((opts: any) => {
+    mockStreamText.mockImplementation((opts: Parameters<typeof streamText>[0]) => {
       // Verify that conversation history was passed to the LLM
-      expect(opts.messages.length).toBeGreaterThan(1);
-      return { textStream: mockTextStream } as any;
+      expect(opts.messages?.length ?? 0).toBeGreaterThan(1);
+      return { textStream: mockTextStream } as unknown as ReturnType<typeof streamText>;
     });
 
     const stream = createTeachingStream({

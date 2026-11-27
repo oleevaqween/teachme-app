@@ -1,3 +1,4 @@
+// type-guard: document colours. The exported CV's own colours (PDF and Word), not app theme colours.
 import React from 'react';
 import { Document as PdfDocument, Page, Text, View, renderToBuffer, Font } from '@react-pdf/renderer';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle, AlignmentType, ShadingType, Table, TableRow, TableCell, WidthType, TableLayoutType } from 'docx';

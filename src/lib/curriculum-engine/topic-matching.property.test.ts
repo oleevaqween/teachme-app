@@ -43,24 +43,6 @@ describe('Property 21: Community Content Topic Matching', () => {
       }))
     );
 
-  // Generate a verified source that strongly matches one of the topics
-  const matchingSourceArb = (sections: ContentSection[]): fc.Arbitrary<VerifiedSource> =>
-    fc.integer({ min: 0, max: sections.length - 1 }).map((targetIdx) => {
-      // Find which topic keywords are in the target section
-      const targetSection = sections[targetIdx];
-      const matchingTopic = topics.find((t) => targetSection.title.includes(t.keyword));
-      const keyword = matchingTopic?.keyword ?? 'general';
-      const domain = matchingTopic?.domain ?? 'information';
-
-      return {
-        url: `https://example.com/${keyword}`,
-        title: `Community insights on ${keyword}`,
-        content: `Expert discussion about ${keyword}. The community shares knowledge on ${domain} related to ${keyword}.`,
-        communityName: `r/${keyword}`,
-        confidenceLevel: 'High' as const,
-      };
-    });
-
   it('internet-sourced sections are placed within 2 positions of a thematically related document-sourced section', () => {
     fc.assert(
       fc.property(distinctSectionsArb, (concepts) => {

@@ -4,14 +4,6 @@ import { describe, it, expect } from 'vitest';
 import { assignChunksToStages } from './stage-assignment';
 import type { RawChunk } from './content-chunker';
 import type { Stage } from './index';
-import type { LLMProviderConfig } from '@/lib/llm/provider';
-
-const mockLLMProvider: LLMProviderConfig = {
-  type: 'openai',
-  apiKey: 'test-key',
-  model: 'gpt-4',
-  timeout: 30000,
-};
 
 function createStages(): Stage[] {
   return [
@@ -47,7 +39,7 @@ function createStages(): Stage[] {
 
 describe('assignChunksToStages (keyword-based)', () => {
   it('returns empty array when no chunks are provided', async () => {
-    const result = await assignChunksToStages([], createStages(), mockLLMProvider);
+    const result = await assignChunksToStages([], createStages());
     expect(result).toEqual([]);
   });
 
@@ -55,7 +47,7 @@ describe('assignChunksToStages (keyword-based)', () => {
     const chunks: RawChunk[] = [
       { content: 'Some content about risk', wordCount: 50, sourceSection: 'Risk', sourceDocument: 'doc.pdf' },
     ];
-    const result = await assignChunksToStages(chunks, [], mockLLMProvider);
+    const result = await assignChunksToStages(chunks, []);
     expect(result).toEqual([]);
   });
 
@@ -75,7 +67,7 @@ describe('assignChunksToStages (keyword-based)', () => {
       },
     ];
 
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
 
     // Risk chunk should match stage-risk
     const riskChunks = result.filter((c) => c.stageId === 'stage-risk');
@@ -94,7 +86,7 @@ describe('assignChunksToStages (keyword-based)', () => {
       { content: 'Another unrelated chunk about bananas', wordCount: 6, sourceSection: 'Food', sourceDocument: 'doc.pdf' },
     ];
 
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
 
     // Every chunk must be assigned somewhere
     expect(result.length).toBeGreaterThanOrEqual(2);
@@ -113,7 +105,7 @@ describe('assignChunksToStages (keyword-based)', () => {
       },
     ];
 
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
 
     // This chunk mentions both risk and scope terms, so it could be assigned to multiple stages
     const stageIds = new Set(result.map((c) => c.stageId));
@@ -130,7 +122,7 @@ describe('assignChunksToStages (keyword-based)', () => {
       },
     ];
 
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
 
     expect(result.length).toBeGreaterThanOrEqual(1);
     const chunk = result[0];
@@ -152,7 +144,7 @@ describe('assignChunksToStages (keyword-based)', () => {
       { content: 'Third risk topic about risk response strategies.', wordCount: 10, sourceSection: 'Risk 3', sourceDocument: 'doc.pdf' },
     ];
 
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
 
     const riskChunks = result.filter((c) => c.stageId === 'stage-risk');
     // Orders should be sequential
@@ -171,7 +163,7 @@ describe('assignChunksToStages (keyword-based)', () => {
     }));
 
     const start = Date.now();
-    const result = await assignChunksToStages(chunks, createStages(), mockLLMProvider);
+    const result = await assignChunksToStages(chunks, createStages());
     const elapsed = Date.now() - start;
 
     // Should complete in under 100ms (no network calls)

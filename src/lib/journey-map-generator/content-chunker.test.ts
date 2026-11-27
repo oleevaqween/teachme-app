@@ -51,7 +51,7 @@ describe('chunkDocumentContent', () => {
 
   it('merges multiple small paragraphs to meet minimum word count', () => {
     // Each paragraph is 60 words, need at least 200 to form a chunk
-    const smallParagraphs = Array.from({ length: 5 }, (_, i) =>
+    const smallParagraphs = Array.from({ length: 5 }, () =>
       generateParagraph(60)
     ).join('\n\n');
 

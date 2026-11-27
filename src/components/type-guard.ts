@@ -145,16 +145,31 @@ const WARM_COLOUR =
 export const ALLOW_DECORATIVE = "type-guard: allow decorative"
 
 /**
- * Hard-coded amber, yellow or orange colour tokens anywhere in the source (class
- * strings, helper constants, maps); theme tokens should be used instead. A line
- * carrying the marker "type-guard: allow decorative" (same line as the icon) is skipped.
+ * A file carrying this marker sets document colours (the user's own CV palette and its exports), which are
+ * deliberately fixed values, not app theme colours; literal colour values are allowed in it.
+ */
+export const ALLOW_DOCUMENT_COLOURS = "type-guard: document colours"
+
+/** A literal colour value: a quoted, styled or bracketed hex code, or rgb/hsl/oklch/oklab written with numbers. */
+const LITERAL_COLOUR =
+  /(?:['"`(:,\s[]#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?=['"`,;)\s_\]]))|(?:\b(?:rgba?|hsla?|oklch|oklab)\(\s*[0-9.])/g
+
+/**
+ * Hard-coded colours anywhere in the source (class strings, styles, helper constants, maps); theme tokens
+ * should be used instead. Two kinds: stock amber, yellow or orange tokens, and literal colour values (hex,
+ * rgb, hsl, oklch). A line carrying "type-guard: allow decorative" is skipped; a file carrying
+ * "type-guard: document colours" may use literal values (it sets the CV's own colours).
  */
 export function colourViolations(src: string): string[] {
   const out: string[] = []
+  const documentColours = src.includes(ALLOW_DOCUMENT_COLOURS)
   for (const line of src.split(/\r?\n/)) {
     if (line.includes(ALLOW_DECORATIVE)) continue
     const hits = line.match(WARM_COLOUR)
     if (hits) out.push(`warm colour: ${[...new Set(hits)].join(", ")}`)
+    if (documentColours) continue
+    if (LITERAL_COLOUR.test(line)) out.push(`literal colour (use a theme token): ${line.trim().slice(0, 80)}`)
+    LITERAL_COLOUR.lastIndex = 0
   }
   return out
 }

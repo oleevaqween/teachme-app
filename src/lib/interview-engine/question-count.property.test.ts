@@ -37,7 +37,7 @@ function enforceQuestionCountBounds(
   const MAX_QUESTIONS = 10;
 
   // Trim if over max
-  let result = questions.slice(0, MAX_QUESTIONS);
+  const result = questions.slice(0, MAX_QUESTIONS);
 
   // Pad if under min
   while (result.length < MIN_QUESTIONS) {

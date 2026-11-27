@@ -42,7 +42,8 @@ export default function JourneyPage() {
   const [journey, setJourney] = useState<JourneyData | null>(null);
   const [progress, setProgress] = useState<JourneyProgress | null>(null);
   const [activity, setActivity] = useState<JourneyActivity | null>(null);
-  const [loading, setLoading] = useState(true);
+  // The journey id whose load has finished; the page shows its spinner until it matches the current id.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Teaching session state: which stage is being viewed
@@ -75,44 +76,24 @@ export default function JourneyPage() {
     }
   }, [journeyId]);
 
-  useEffect(() => {
-    // If generating, wait for the journey to be set in the store
-    if (isGenerating) {
-      setLoading(true);
-      return;
-    }
+  /**
+   * A link such as a "Due for review" reminder (?stage=ID) opens that stage straight away when it belongs to
+   * this journey and is not known to be locked (if progress could not be read, it still opens: reminders never
+   * list locked stages and the server refuses them); the address is then tidied so a refresh shows the map.
+   */
+  const openLinkedStage = useCallback((data: InteractiveJourneyData, loadedProgress: JourneyProgress | null) => {
+    const url = new URL(window.location.href);
+    const stageId = url.searchParams.get("stage");
+    if (!stageId) return;
+    url.searchParams.delete("stage");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    const status = loadedProgress?.stages.find((s) => s.stageId === stageId)?.status;
+    if (data.stages.some((s) => s.id === stageId) && status !== "locked") setActiveStageId(stageId);
+  }, []);
 
-    // If the current journey from store matches the ID (just generated)
-    if (currentJourney && currentJourney.id === journeyId) {
-      // Treat store journey as potentially interactive — refetch from API
-      // to get the full response shape with isInteractive flag
-      fetchJourney();
-      return;
-    }
-
-    fetchJourney();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, isGenerating]);
-
-  // The CV Studio link lives only in this browser; it is read once the journey has loaded,
-  // which only happens in the browser, so the server render never touches storage.
-  const cvLink = useMemo(
-    () => (journey?.isInteractive ? findJourneyCvLink(browserLocalStorage(), journeyId) : null),
-    [journey, journeyId]
-  );
-
-  // Update journey when store changes (generation completes)
-  useEffect(() => {
-    if (currentJourney && currentJourney.id === journeyId && !isGenerating) {
-      fetchJourney();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentJourney, journeyId, isGenerating]);
-
-  async function fetchJourney() {
-    setLoading(true);
-    setError(null);
-
+  // Loads the journey (and, for an interactive one, its progress and activity). State is only set after the
+  // request returns, so calling it from an effect never sets state synchronously.
+  const fetchJourney = useCallback(async () => {
     try {
       const response = await fetch(`/api/journey/${journeyId}`);
       if (!response.ok) {
@@ -120,6 +101,7 @@ export default function JourneyPage() {
       }
       const data: JourneyData = await response.json();
       setJourney(data);
+      setError(null);
 
       // If interactive, also fetch progress and the latest lesson activity
       if (data.isInteractive) {
@@ -131,24 +113,31 @@ export default function JourneyPage() {
         "This journey could not be found. It may have been removed or the link is invalid."
       );
     } finally {
-      setLoading(false);
+      setLoadedFor(journeyId);
     }
-  }
+  }, [journeyId, fetchProgress, fetchActivity, openLinkedStage]);
 
-  /**
-   * A link such as a "Due for review" reminder (?stage=ID) opens that stage straight away when it belongs to
-   * this journey and is not known to be locked (if progress could not be read, it still opens: reminders never
-   * list locked stages and the server refuses them); the address is then tidied so a refresh shows the map.
-   */
-  function openLinkedStage(data: InteractiveJourneyData, loadedProgress: JourneyProgress | null) {
-    const url = new URL(window.location.href);
-    const stageId = url.searchParams.get("stage");
-    if (!stageId) return;
-    url.searchParams.delete("stage");
-    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-    const status = loadedProgress?.stages.find((s) => s.stageId === stageId)?.status;
-    if (data.stages.some((s) => s.id === stageId) && status !== "locked") setActiveStageId(stageId);
-  }
+  // Load once generation has finished (the spinner shows meanwhile), and again when the store receives this
+  // journey from a generation that just completed. One effect, so a finished generation loads it once.
+  const storeHasJourney = currentJourney?.id === journeyId;
+  useEffect(() => {
+    if (isGenerating) return;
+    // Started from a promise callback so no state is set while the effect runs; skipped if the page moved on.
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) void fetchJourney();
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchJourney, isGenerating, storeHasJourney]);
+
+  // The CV Studio link lives only in this browser; it is read once the journey has loaded,
+  // which only happens in the browser, so the server render never touches storage.
+  const cvLink = useMemo(
+    () => (journey?.isInteractive ? findJourneyCvLink(browserLocalStorage(), journeyId) : null),
+    [journey, journeyId]
+  );
 
   function handleStageClick(stageId: string) {
     setActiveStageId(stageId);
@@ -163,7 +152,7 @@ export default function JourneyPage() {
   }
 
   // Loading state
-  if (loading || isGenerating) {
+  if (loadedFor !== journeyId || isGenerating) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-4">
         <Loader2

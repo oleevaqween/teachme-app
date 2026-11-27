@@ -5,11 +5,9 @@ import type { ParsedDocument, ContentSection } from '@/lib/document-processor';
 import type { LLMProviderConfig } from '@/lib/llm/provider';
 import { searchInternetSources } from '@/lib/web-sourcer';
 import type { CommunitySource } from '@/lib/web-sourcer';
-import { verifyBatch } from '@/lib/information-validator';
 import { prisma } from '@/lib/db/client';
-import { mapToVerifiedSources, integrateSources, collectAttributions } from './source-integrator';
+import { integrateSources, collectAttributions } from './source-integrator';
 import { buildJourneyStructure } from './journey-builder';
-import { planQuizInsertion, generateQuizForSection } from './quiz-generator';
 
 export interface Journey {
   id: string;
@@ -265,7 +263,7 @@ Remember:
   });
 
   // Build verified sources from community search results for attribution
-  let verifiedSources: VerifiedSource[] = communitySources
+  const verifiedSources: VerifiedSource[] = communitySources
     .filter((s) => s.content.length > 50)
     .map((s) => ({
       url: s.url,

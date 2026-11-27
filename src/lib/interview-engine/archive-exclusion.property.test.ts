@@ -45,8 +45,8 @@ describe('Property 13: Archive Exclusion', () => {
 
   it('generated question IDs have no overlap with archived IDs', () => {
     fc.assert(
-      fc.property(allIdsArb, fc.integer({ min: 0, max: 100 }), (allIds, seed) => {
-        // Use seed to deterministically split IDs into archived and available
+      fc.property(allIdsArb, (allIds) => {
+        // Archive the first 60% (at least one ID stays available)
         const archiveCount = Math.min(Math.floor(allIds.length * 0.6), allIds.length - 1);
         const archivedIds = new Set(allIds.slice(0, archiveCount));
         const generatedIds = generateExcludingArchived(allIds, archivedIds, 10);
