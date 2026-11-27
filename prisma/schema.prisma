@@ -71,6 +71,7 @@ model Stage {
   messages      TeachingMessage[]
   progress      StageProgress?
   note          StageNote?
+  studyTime     StageStudyTime?
 
   @@index([journeyId])
   @@unique([journeyId, order])
@@ -127,6 +128,20 @@ model StageNote {
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
+}
+
+// Time spent actively studying a stage, in seconds (lesson open, window visible, recent activity).
+model StageStudyTime {
+  id        String   @id @default(cuid())
+  stageId   String   @unique
+  journeyId String
+  seconds       Int       @default(0)
+  // Set only by a stretch of at least MIN_SECONDS_FOR_LAST_STUDIED, so a brief peek does not move "Continue".
+  lastStudiedAt DateTime?
+  updatedAt     DateTime  @updatedAt
   stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
   @@index([journeyId])

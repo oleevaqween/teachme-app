@@ -24,6 +24,7 @@ import { READING_COLUMN as COLUMN } from './reading-width';
 import { HeaderPopover } from './HeaderPopover';
 import { StageNotes } from './StageNotes';
 import { useStageNote } from './use-stage-note';
+import { useStudyTime } from './use-study-time';
 import { ArrowLeft, Send, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface TeachingSessionProps {
@@ -56,6 +57,7 @@ export function TeachingSession({
   const [loadingPhrase, setLoadingPhrase] = useState<string>('');
   const [stageSources, setStageSources] = useState<StageSourceList | null>(null);
   const note = useStageNote(journeyId, stageId);
+  useStudyTime(journeyId, stageId, status === 'streaming' || status === 'initializing');
 
   const { streamingMessage, setStreamingMessage, clearStageMessages } =
     useJourneyStore();

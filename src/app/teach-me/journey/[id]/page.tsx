@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useJourneyStore } from "@/store/journey-store";
 import { JourneyMap } from "@/components/journey/JourneyMap";
 import { TeachingSession } from "@/components/journey/TeachingSession";
+import { studyTimeSaved } from "@/components/journey/use-study-time";
 import { LESSON_PAGE } from "@/components/journey/reading-width";
 import { CompletionCelebration } from "@/components/journey/CompletionCelebration";
 import { migrateLegacyJourney } from "@/lib/journey-map-generator/legacy-migration";
@@ -137,9 +138,10 @@ export default function JourneyPage() {
 
   function handleBackToMap() {
     setActiveStageId(null);
-    // Refresh progress and activity when returning from a teaching session
+    // Refresh progress and activity when returning from a teaching session. Activity waits until the
+    // lesson has closed and its last study time has been saved, so the map shows the full total.
     fetchProgress();
-    fetchActivity();
+    window.setTimeout(() => void studyTimeSaved().then(fetchActivity), 0);
   }
 
   // Loading state

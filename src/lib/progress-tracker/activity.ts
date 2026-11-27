@@ -9,6 +9,8 @@ export interface StageActivity {
   stageId: string;
   /** ISO time of the stage's latest TeachingMessage, or null when it has none. */
   lastStudiedAt: string | null;
+  /** Seconds of active study on the stage; absent counts as 0. */
+  studySeconds?: number;
 }
 
 /** Activity as the journey map uses it: per-stage times plus the moment they were read. */
@@ -17,15 +19,23 @@ export interface JourneyActivity {
   now: Date;
 }
 
-/** One entry per stage, in the given order, with the latest message time or null. */
+/**
+ * One entry per stage, in the given order. Last studied is the later of the stage's latest message and
+ * the study time's lastStudiedAt (a stretch of reading counts too; a brief peek does not); null when neither.
+ */
 export function stageActivity(
   stageIds: readonly string[],
-  latest: readonly { stageId: string; at: Date | null }[]
+  latest: readonly { stageId: string; at: Date | null }[],
+  study: readonly { stageId: string; seconds: number; lastStudiedAt?: Date | null }[] = []
 ): StageActivity[] {
   const byStage = new Map(latest.map((row) => [row.stageId, row.at]));
+  const studied = new Map(study.map((row) => [row.stageId, row]));
   return stageIds.map((stageId) => {
-    const at = byStage.get(stageId);
-    return { stageId, lastStudiedAt: at ? at.toISOString() : null };
+    const message = byStage.get(stageId) ?? null;
+    const row = studied.get(stageId);
+    const timed = row?.lastStudiedAt ?? null;
+    const at = message && timed ? (timed > message ? timed : message) : message ?? timed;
+    return { stageId, lastStudiedAt: at ? at.toISOString() : null, studySeconds: row?.seconds ?? 0 };
   });
 }
 
@@ -35,10 +45,11 @@ export function parseActivity(data: unknown): StageActivity[] | null {
   const stages: StageActivity[] = [];
   for (const item of (data as { stages: unknown[] }).stages) {
     if (!item || typeof item !== 'object') return null;
-    const { stageId, lastStudiedAt } = item as Record<string, unknown>;
+    const { stageId, lastStudiedAt, studySeconds } = item as Record<string, unknown>;
     if (typeof stageId !== 'string') return null;
     if (lastStudiedAt !== null && (typeof lastStudiedAt !== 'string' || Number.isNaN(Date.parse(lastStudiedAt)))) return null;
-    stages.push({ stageId, lastStudiedAt });
+    if (studySeconds !== undefined && (typeof studySeconds !== 'number' || !Number.isFinite(studySeconds) || studySeconds < 0)) return null;
+    stages.push({ stageId, lastStudiedAt, studySeconds: studySeconds ?? 0 });
   }
   return stages;
 }

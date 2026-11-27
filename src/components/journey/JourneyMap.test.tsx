@@ -65,3 +65,32 @@ describe('journey map: pick up where you left off', () => {
     }
   });
 });
+
+describe('journey map: study time', () => {
+  const timed: JourneyActivity = {
+    now: activity.now,
+    stages: [
+      { stageId: 's1', lastStudiedAt: new Date(2026, 10, 18, 9, 0).toISOString(), studySeconds: 25 * 60 },
+      { stageId: 's2', lastStudiedAt: new Date(2026, 10, 19, 8, 0).toISOString(), studySeconds: 30 },
+      { stageId: 's3', lastStudiedAt: null, studySeconds: 3600 + 5 * 60 },
+    ],
+  };
+
+  it('adds the study time to the last-studied line, only from a minute up', () => {
+    const html = render(progress(['completed', 'in_progress', 'unlocked']), timed);
+    expect(html).toContain('Last studied yesterday · 25 min');
+    expect(html).toContain('Last studied today<');
+    expect(html).toContain('Studied 1 h 5 min');
+  });
+
+  it('shows the journey total under the progress bar', () => {
+    const html = render(progress(['completed', 'in_progress', 'unlocked']), timed);
+    expect(html).toContain('Time studied: 1 h 30 min');
+    expect(html.indexOf('stages complete')).toBeLessThan(html.indexOf('Time studied:'));
+  });
+
+  it('shows no total under a minute or without activity', () => {
+    expect(render(progress(['completed', 'in_progress', 'locked']), activity)).not.toContain('Time studied');
+    expect(render(progress(['completed', 'in_progress', 'locked']))).not.toContain('Time studied');
+  });
+});

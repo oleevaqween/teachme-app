@@ -4,11 +4,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { handleApiError } from '@/lib/errors';
 import { stageActivity } from '@/lib/progress-tracker/activity';
+import { isMissingStudyTimeTable } from '@/lib/progress-tracker/study-time';
 
 /**
  * GET /api/journey/[id]/activity
- * Read-only: for each stage of the journey, the time of its latest TeachingMessage (or null).
- * Response: { stages: { stageId: string; lastStudiedAt: string | null }[] } in stage order.
+ * Read-only: for each stage of the journey, when it was last studied (latest TeachingMessage or study time) and its study time.
+ * Response: { stages: { stageId: string; lastStudiedAt: string | null; studySeconds: number }[] } in stage order.
+ * A database without the study time table (not yet updated) reports 0 seconds.
  */
 export async function GET(
   request: Request,
@@ -41,10 +43,23 @@ export async function GET(
       _max: { createdAt: true },
     });
 
+    // Study time is optional: a database not yet updated, or any error reading it, shows no times
+    // rather than costing the map its dates and Continue button.
+    let study: { stageId: string; seconds: number; lastStudiedAt: Date | null }[] = [];
+    try {
+      study = await prisma.stageStudyTime.findMany({
+        where: { journeyId: id },
+        select: { stageId: true, seconds: true, lastStudiedAt: true },
+      });
+    } catch (error) {
+      if (!isMissingStudyTimeTable(error)) console.error('Study time could not be read:', error);
+    }
+
     return NextResponse.json({
       stages: stageActivity(
         stages.map((s) => s.id),
-        latest.map((row) => ({ stageId: row.stageId, at: row._max.createdAt }))
+        latest.map((row) => ({ stageId: row.stageId, at: row._max.createdAt })),
+        study
       ),
     });
   } catch (error) {

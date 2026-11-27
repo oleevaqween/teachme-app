@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import type { JourneyProgress, StageProgress } from '@/lib/progress-tracker';
 import { lastStudiedLabel, resumeTarget, type JourneyActivity } from '@/lib/progress-tracker/activity';
+import { studyTimeLabel, totalStudyLabel } from '@/lib/progress-tracker/study-time';
 import { CheckCircle2, Lock, Circle, Play } from 'lucide-react';
 
 export interface JourneyStage {
@@ -217,6 +218,18 @@ export function JourneyMap({ stages, progress, onStageClick, activity }: Journey
   const targetId = activity ? resumeTarget(sortedStages, progress.stages, activity.stages) : null;
   const target = targetId ? sortedStages.find((s) => s.id === targetId) : undefined;
   const studiedAt = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.lastStudiedAt]));
+  const studySeconds = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.studySeconds ?? 0]));
+  const totalLabel = activity ? totalStudyLabel(activity.stages.map((a) => a.studySeconds ?? 0)) : null;
+
+  /** "Last studied yesterday · 25 min", "Studied 25 min" or just the date; undefined without either. */
+  const studiedLine = (stageId: string): string | undefined => {
+    if (!activity) return undefined;
+    const at = studiedAt.get(stageId);
+    const time = studyTimeLabel(studySeconds.get(stageId) ?? 0);
+    const date = at ? lastStudiedLabel(new Date(at), activity.now) : null;
+    if (date && time) return `${date} · ${time}`;
+    return date ?? (time ? `Studied ${time}` : undefined);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -236,6 +249,7 @@ export function JourneyMap({ stages, progress, onStageClick, activity }: Journey
         totalStages={progress.totalStages}
         percentComplete={progress.percentComplete}
       />
+      {totalLabel && <p className="-mt-3 text-small text-muted-foreground">{totalLabel}</p>}
 
       {/* Vertical journey path */}
       <div
@@ -246,7 +260,6 @@ export function JourneyMap({ stages, progress, onStageClick, activity }: Journey
         {sortedStages.map((stage, index) => {
           const status = getStageStatus(stage.id, progress.stages);
           const isLast = index === sortedStages.length - 1;
-          const at = studiedAt.get(stage.id);
 
           return (
             <StageNodeItem
@@ -255,7 +268,7 @@ export function JourneyMap({ stages, progress, onStageClick, activity }: Journey
               status={status}
               isLast={isLast}
               onStageClick={onStageClick}
-              lastStudied={at && activity ? lastStudiedLabel(new Date(at), activity.now) : undefined}
+              lastStudied={studiedLine(stage.id)}
             />
           );
         })}

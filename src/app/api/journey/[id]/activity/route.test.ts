@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mock = vi.hoisted(() => ({ journey: vi.fn(), stages: vi.fn(), groupBy: vi.fn() }));
+const mock = vi.hoisted(() => ({ journey: vi.fn(), stages: vi.fn(), groupBy: vi.fn(), study: vi.fn() }));
 // Only read methods exist on this fake, so any write would throw; no database is opened.
 vi.mock('@/lib/db/client', () => ({
   prisma: {
     journey: { findUnique: mock.journey },
     stage: { findMany: mock.stages },
     teachingMessage: { groupBy: mock.groupBy },
+    stageStudyTime: { findMany: mock.study },
   },
 }));
 import { GET } from './route';
@@ -22,6 +23,7 @@ describe('GET /api/journey/[id]/activity', () => {
       { stageId: 's2', _max: { createdAt: new Date('2026-11-18T10:00:00.000Z') } },
       { stageId: 's1', _max: { createdAt: new Date('2026-11-17T08:00:00.000Z') } },
     ]);
+    mock.study.mockResolvedValue([{ stageId: 's2', seconds: 1500 }]);
   });
 
   it('returns each stage with the time of its latest message, or null', async () => {
@@ -29,13 +31,50 @@ describe('GET /api/journey/[id]/activity', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       stages: [
-        { stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z' },
-        { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z' },
-        { stageId: 's3', lastStudiedAt: null },
+        { stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0 },
+        { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 1500 },
+        { stageId: 's3', lastStudiedAt: null, studySeconds: 0 },
       ],
     });
     expect(mock.stages).toHaveBeenCalledWith({ where: { journeyId: 'j1' }, select: { id: true }, orderBy: { order: 'asc' } });
     expect(mock.groupBy).toHaveBeenCalledWith({ by: ['stageId'], where: { journeyId: 'j1' }, _max: { createdAt: true } });
+  });
+
+  it('reads study time for the journey', async () => {
+    await call('j1');
+    expect(mock.study).toHaveBeenCalledWith({ where: { journeyId: 'j1' }, select: { stageId: true, seconds: true, lastStudiedAt: true } });
+  });
+
+  it('uses the latest study time as last studied when it is later than the latest message', async () => {
+    mock.study.mockResolvedValue([
+      { stageId: 's1', seconds: 120, lastStudiedAt: new Date('2026-11-20T09:00:00.000Z') },
+      { stageId: 's2', seconds: 60, lastStudiedAt: new Date('2026-11-01T09:00:00.000Z') },
+    ]);
+    const body = await (await call('j1')).json();
+    expect(body.stages.map((s: { lastStudiedAt: string | null }) => s.lastStudiedAt)).toEqual([
+      '2026-11-20T09:00:00.000Z',
+      '2026-11-18T10:00:00.000Z',
+      null,
+    ]);
+  });
+
+  it('reports 0 seconds when the database has no study time table yet', async () => {
+    mock.study.mockRejectedValue(new Error('SQLITE_ERROR: no such table: main.StageStudyTime'));
+    const response = await call('j1');
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.stages.map((s: { studySeconds: number }) => s.studySeconds)).toEqual([0, 0, 0]);
+  });
+
+  it('keeps the dates and reports 0 seconds on any other study time error', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mock.study.mockRejectedValue(new Error('SQLITE_BUSY: database is locked'));
+    const response = await call('j1');
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.stages[0]).toEqual({ stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0 });
+    expect(quiet).toHaveBeenCalled();
+    quiet.mockRestore();
   });
 
   it('answers 404 for an unknown journey without reading messages', async () => {

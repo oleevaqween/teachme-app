@@ -16,15 +16,44 @@ describe('stage activity', () => {
   it('lists every stage in order with its latest message time or null', () => {
     const at = new Date('2026-11-18T10:00:00.000Z');
     expect(stageActivity(['s1', 's2'], [{ stageId: 's2', at }, { stageId: 'other', at }])).toEqual([
-      { stageId: 's1', lastStudiedAt: null },
-      { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z' },
+      { stageId: 's1', lastStudiedAt: null, studySeconds: 0 },
+      { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 0 },
     ]);
-    expect(stageActivity(['s1'], [{ stageId: 's1', at: null }])).toEqual([{ stageId: 's1', lastStudiedAt: null }]);
+    expect(stageActivity(['s1'], [{ stageId: 's1', at: null }])).toEqual([{ stageId: 's1', lastStudiedAt: null, studySeconds: 0 }]);
+  });
+
+  it('counts reading time as studying: last studied is the later of message and study time', () => {
+    const message = new Date('2026-11-18T10:00:00.000Z');
+    const later = new Date('2026-11-20T10:00:00.000Z');
+    const earlier = new Date('2026-11-01T10:00:00.000Z');
+    expect(
+      stageActivity(
+        ['a', 'b', 'c', 'd'],
+        [{ stageId: 'a', at: message }, { stageId: 'b', at: message }],
+        [
+          { stageId: 'a', seconds: 60, lastStudiedAt: later },
+          { stageId: 'b', seconds: 60, lastStudiedAt: earlier },
+          { stageId: 'c', seconds: 60, lastStudiedAt: later },
+          { stageId: 'd', seconds: 5, lastStudiedAt: null },
+        ]
+      ).map((a) => a.lastStudiedAt)
+    ).toEqual([later.toISOString(), message.toISOString(), later.toISOString(), null]);
+  });
+
+  it('adds each stage its study seconds', () => {
+    expect(stageActivity(['s1', 's2'], [], [{ stageId: 's2', seconds: 1500 }, { stageId: 'other', seconds: 9 }])).toEqual([
+      { stageId: 's1', lastStudiedAt: null, studySeconds: 0 },
+      { stageId: 's2', lastStudiedAt: null, studySeconds: 1500 },
+    ]);
   });
 
   it('reads well-formed endpoint JSON and rejects anything else', () => {
-    const good = { stages: [{ stageId: 's1', lastStudiedAt: '2026-11-18T10:00:00.000Z' }, { stageId: 's2', lastStudiedAt: null }] };
+    const good = { stages: [{ stageId: 's1', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 90 }, { stageId: 's2', lastStudiedAt: null, studySeconds: 0 }] };
     expect(parseActivity(good)).toEqual(good.stages);
+    // Older answers without study time read as 0 seconds.
+    expect(parseActivity({ stages: [{ stageId: 's1', lastStudiedAt: null }] })).toEqual([{ stageId: 's1', lastStudiedAt: null, studySeconds: 0 }]);
+    expect(parseActivity({ stages: [{ stageId: 's1', lastStudiedAt: null, studySeconds: -1 }] })).toBeNull();
+    expect(parseActivity({ stages: [{ stageId: 's1', lastStudiedAt: null, studySeconds: '90' }] })).toBeNull();
     expect(parseActivity(null)).toBeNull();
     expect(parseActivity({ error: 'Journey not found.' })).toBeNull();
     expect(parseActivity({ stages: [{ stageId: 1, lastStudiedAt: null }] })).toBeNull();
