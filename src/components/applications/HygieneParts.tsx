@@ -109,7 +109,7 @@ export function ScreeningAnswersSection({ profile, onSaved }: { profile: Screeni
 
   return (
     <details className="mb-6 rounded-xl border border-border/60 bg-card/80 p-4">
-      <summary className="cursor-pointer text-small font-semibold text-foreground">Screening answers</summary>
+      <summary className="cursor-pointer text-lead leading-snug text-foreground">Screening answers</summary>
       <div className="mt-3 space-y-3">
         {profile.unreadable && <p role="status" className="rounded-lg border border-primary/40 bg-accent p-3 text-small text-accent-foreground">{SCREENING_UNREADABLE}</p>}
         <p className="text-small text-foreground-secondary">{HONESTY_NOTE}</p>

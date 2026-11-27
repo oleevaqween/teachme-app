@@ -61,6 +61,13 @@ describe('screening checklist', () => {
 });
 
 describe('screening answers section', () => {
+  it('titles the collapsed section at the same size as the panel heading (text-lead)', () => {
+    const html = renderToStaticMarkup(<ScreeningAnswersSection profile={{ answers: {}, revision: 1 }} onSaved={noop} />);
+    const summary = /<summary class="([^"]*)">Screening answers<\/summary>/.exec(html)?.[1] ?? '';
+    expect(summary.split(' ')).toContain('text-lead');
+    expect(summary.split(' ')).not.toContain('text-small');
+  });
+
   it('is collapsed by default and holds all ten questions in the standard order', () => {
     const html = renderToStaticMarkup(<ScreeningAnswersSection profile={{ answers: { notice: 'One month' }, revision: 3 }} onSaved={noop} />);
     expect(html.startsWith('<details')).toBe(true);
