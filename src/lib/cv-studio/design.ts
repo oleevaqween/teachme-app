@@ -18,6 +18,12 @@ export const DEFAULT_CUSTOM = '#c2410c';
 const LEGACY: readonly string[] = ['teal', 'navy', 'slate'];
 const HEX = /^#[0-9a-f]{6}$/i;
 
+/** A typed custom colour as '#rrggbb' in lower case: the '#' may be left out; null unless it is six hex digits. */
+export function normalizeHex(value: string): string | null {
+  const match = /^#?([0-9a-f]{6})$/i.exec(value.trim());
+  return match ? `#${match[1].toLowerCase()}` : null;
+}
+
 const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 function luminance(hex: string): number {
   const [r, g, b] = channels(hex).map(v => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCvDate } from './cv-checker';
-import { applyCut, bulletScore, cutAdvice, cutLines, cutPlan, cutSummary, cvWords, keepCount, refreshCutPlan, ROLE_CHANGED } from './condense';
+import { applyCut, bulletScore, cutAdvice, cutLines, cutPlan, cutSummary, cvWords, keepCount, refreshCutPlan, ROLE_CHANGED, roleChangedMessage } from './condense';
 import { emptyResume, type Resume, type Workspace } from './schema';
 import { fixture } from './test-fixture';
 
@@ -84,6 +84,14 @@ describe('cut plan', () => {
   });
 });
 
+describe('cut ids', () => {
+  it('never proposes the same role twice, even if two entries share an id', () => {
+    const resume = sized([role('dup', '2008', OLD), role('dup', '2009', OLD), role('new', 'Present', '• Led 5 people')], 5);
+    const ids = cutPlan(app(resume), NOW).proposals.map(p => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
 describe('applying a cut', () => {
   it('replaces only that role, and refuses when the role has changed', () => {
     const resume = sized([role('old', '2008', OLD), role('new', 'Present', '• Led 5 people')], 5);
@@ -91,7 +99,14 @@ describe('applying a cut', () => {
     const cut = applyCut(resume, proposal);
     expect(cut.experience.map(e => e.achievements)).toEqual(['', '• Led 5 people']);
     const edited = { ...resume, experience: resume.experience.map(e => (e.id === 'old' ? { ...e, achievements: OLD + '\n• New line' } : e)) };
-    expect(() => applyCut(edited, proposal)).toThrow(ROLE_CHANGED);
+    expect(() => applyCut(edited, proposal)).toThrow(roleChangedMessage(proposal.label));
+  });
+
+  it('names the role that changed, so Apply all says which one to look at', () => {
+    expect(roleChangedMessage('Project Manager · Sahel Logistics')).toBe(
+      'Project Manager · Sahel Logistics has changed since the suggestions were made. Press Suggest cuts again.'
+    );
+    expect(roleChangedMessage('  ')).toBe(ROLE_CHANGED);
   });
 });
 

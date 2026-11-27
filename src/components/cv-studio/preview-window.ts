@@ -99,3 +99,11 @@ export function stepZoom(current: number, direction: 1 | -1): number {
   const index = steps.indexOf(parseZoom(String(current)));
   return steps[clamp(index + direction, 0, steps.length - 1)];
 }
+
+/**
+ * Whether Escape pressed outside the floating preview should close it: not when another control already used
+ * the key, not while typing in a field (Escape there belongs to the field), and not while a dialog is open.
+ */
+export function escapeClosesPreview(event: { key: string; defaultPrevented: boolean; editable: boolean; modalOpen: boolean }): boolean {
+  return event.key === 'Escape' && !event.defaultPrevented && !event.editable && !event.modalOpen;
+}

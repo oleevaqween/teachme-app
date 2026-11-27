@@ -169,7 +169,11 @@ export function createPracticeHandlers(deps: PracticeDeps) {
     const same = claims.filter(q => q.target === input.target && q.bullet === input.bullet);
     const toSession = (q: PracticeQuestion) => buildSessionQuestions({ ...workspace, package: null }, [q], data.attempts)[0];
     const latest = same.at(-1);
-    if (!input.fresh && latest) return json({ question: toSession(latest), fallback: false });
+    // Reopening a saved claim question: it is the standard question when its text is exactly the standard one
+    // for this bullet, so the "standard question" note shows again (nothing extra is stored).
+    if (!input.fresh && latest) {
+      return json({ question: toSession(latest), fallback: latest.question === fallbackClaimQuestion(input.bullet).question });
+    }
     if (claims.length >= MAX_CLAIM_QUESTIONS) return json({ error: CLAIM_LIMIT }, 400);
     const info = applicationInfo(workspace);
     let written: { question: string; guidance: string };

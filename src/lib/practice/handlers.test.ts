@@ -257,6 +257,9 @@ describe('claim questions', () => {
       ai.claim.mockRejectedValueOnce(new Error('Provider timed out'));
       const body = await (await handlers.POST(post(claimBody()))).json();
       expect(body).toMatchObject({ fallback: true, question: { text: fallbackClaimQuestion(bullet).question } });
+      // Reopening the same claim still says it is the standard question.
+      const again = await (await handlers.POST(post(claimBody()))).json();
+      expect(again).toMatchObject({ fallback: true, question: { key: body.question.key } });
     } finally { log.mockRestore(); }
   });
 

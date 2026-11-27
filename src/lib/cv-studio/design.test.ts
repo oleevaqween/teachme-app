@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  accentIds, accentPresets, colourCheck, contrastRatio, fontPairIds, fontPairs, LEGACY_TINT, pdfFamilyName,
+  accentIds, accentPresets, colourCheck, contrastRatio, normalizeHex, fontPairIds, fontPairs, LEGACY_TINT, pdfFamilyName,
   resolveAccent, resolveFonts, shadeTint, type FontPairId,
 } from './design';
 import { templateIds, templates } from './templates';
@@ -87,5 +87,17 @@ describe('fonts', () => {
     expect(r.pdf.body).toEqual({ regular: 'StudioSerif', bold: 'StudioSerif' });
     expect(r.word).toEqual({ heading: 'Garamond', body: 'Garamond' });
     expect(r.css).toEqual({ heading: fontPairs.garamond.heading.css, body: fontPairs.garamond.body.css });
+  });
+});
+
+describe('normalizeHex (typed custom colours)', () => {
+  it('accepts a six-digit code with or without the #, in any case, as lower case with #', () => {
+    expect(normalizeHex('c2410c')).toBe('#c2410c');
+    expect(normalizeHex('#C2410C')).toBe('#c2410c');
+    expect(normalizeHex('  213e64 ')).toBe('#213e64');
+  });
+
+  it('leaves anything else alone, including a part-typed or three-digit code', () => {
+    for (const value of ['', '#', 'c24', '#c24', 'c2410', 'c2410cz', 'navy', '#ggg000']) expect(normalizeHex(value)).toBeNull();
   });
 });

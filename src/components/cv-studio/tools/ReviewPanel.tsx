@@ -1,5 +1,5 @@
 'use client';
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { targetText, type Workspace } from '@/lib/cv-studio/schema';
 import { checkCv } from '@/lib/cv-studio/cv-checker';
@@ -29,7 +29,11 @@ export function ReviewPanel({ c, w }: { c: StudioController; w: Workspace }) {
   const { freshAnalysis, openEvidence, draft, showTailored, setShowTailored, applyDraft, pending, decide, prepare, setTab } = c;
   // A guide holding only "don't have yet" terms has no questions to continue, so it counts as no guide here.
   const guide = c.guide?.answers.length ? c.guide : undefined;
-  const check = checkCv(w.resume, undefined, c.spelling, { market: w.market, pageSize: w.layout.pageSize });
+  // Recomputed only when the CV, spelling result, market or page size changes, not on every render.
+  const check = useMemo(
+    () => checkCv(w.resume, undefined, c.spelling, { market: w.market, pageSize: w.layout.pageSize }),
+    [w.resume, c.spelling, w.market, w.layout.pageSize]
+  );
   return <>
             <div className="panel-intro"><span className="studio-step">02 / SHAPE THE EVIDENCE</span><h2>A deliberate improvement.</h2><p>Review what the role asks for, then choose the edits that sound like you.</p></div>
             {w.analysis ? <>

@@ -71,6 +71,10 @@ describe('personal details', () => {
     'Published "Gender: a useful category of analysis" in a journal.',
     'A product born on a whiteboard.',
     'Visa status: single entry',
+    'Gender studies and policy research.',
+    'Led research on gender and pay.',
+    'Religion and society reading group (organiser).',
+    'Sex education programme for 400 students.',
   ])('does not flag %s', line => {
     expect(ids(withText({ summary: line }))).toEqual([]);
   });
@@ -84,6 +88,13 @@ describe('personal details', () => {
     expect(ids(withText({ additional: 'Hobbies: chess\n- Religion: Islam' }))).toContain('market.personal.religion');
     expect(ids(withText({ personal: { ...emptyResume().personal, location: 'Lagos (Gender: Male)' } }))).toContain('market.personal.gender');
     expect(ids(withText({ summary: 'Visa - status: single entry' }))).toEqual([]);
+    // A label followed by a typical answer, without a colon, is still a personal detail.
+    for (const line of ['Gender Male', 'Sex - F', '- Gender Female', 'Lagos | Gender Male']) {
+      expect(ids(withText({ additional: line })), line).toContain('market.personal.gender');
+    }
+    for (const line of ['Religion Christian', 'Religion - Islam', '• Religion Catholic']) {
+      expect(ids(withText({ additional: line })), line).toContain('market.personal.religion');
+    }
     expect(ids(withText({ additional: 'Born on May 1, 1990' }))).toContain('market.personal.birth');
     expect(ids(withText({ additional: 'DOB: 1990' }))).toContain('market.personal.birth');
   });

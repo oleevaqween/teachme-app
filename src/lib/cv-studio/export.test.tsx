@@ -359,6 +359,15 @@ describe('long words in narrow columns', () => {
     expect(flat).toContain(link.replace(/^https:\/\//, ''));
   }, 30000);
 
+  it('wraps a long plain web address (no @ or /) in the panel without inserting a hyphen', async () => {
+    const w = fixture(); w.layout.columns = 'panel';
+    const site = 'theprojectmanagementandprogrammedeliveryconsultancygroup.com';
+    w.resume.personal.linkedin = site;
+    const pdf = await exportDocument(w, 'pdf');
+    expect(pdf.verification.textVerified).toBe(true);
+    expect((await pdfText(pdf.buffer)).replace(/\s+/g, '')).toContain(site);
+  }, 30000);
+
   it.each(['right', 'panel'] as const)('hyphenates a very long word with no punctuation inside a %s column', async columns => {
     const w = fixture(); w.layout.columns = columns;
     const word = 'Pneumonoultramicroscopicsilicovolcanoconiosis';

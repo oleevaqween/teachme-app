@@ -14,6 +14,12 @@ export type CutPlan = { proposals: CutProposal[]; before: number; after: number;
 
 export const ROLE_CHANGED = 'This role has changed since the suggestions were made. Press Suggest cuts again.';
 
+/** The refusal when a role was edited after the cuts were suggested, naming the role (so "Apply all" says which one). */
+export function roleChangedMessage(label: string): string {
+  const name = label.trim();
+  return name ? `${name} has changed since the suggestions were made. Press Suggest cuts again.` : ROLE_CHANGED;
+}
+
 /** The word count the checker's length rule uses. */
 export function cvWords(resume: Resume): number {
   return profileText(resume).split(/\s+/).filter(Boolean).length;
@@ -61,11 +67,11 @@ export function cutLines(achievements: string, keep: number, terms: string[]): {
 export function applyCut(resume: Resume, proposal: CutProposal): Resume {
   if (proposal.section === 'experience') {
     const at = resume.experience.findIndex(e => e.id === proposal.entryId);
-    if (at < 0 || resume.experience[at].achievements !== proposal.before) throw new Error(ROLE_CHANGED);
+    if (at < 0 || resume.experience[at].achievements !== proposal.before) throw new Error(roleChangedMessage(proposal.label));
     return { ...resume, experience: resume.experience.map((e, i) => (i === at ? { ...e, achievements: proposal.after } : e)) };
   }
   const at = resume.volunteering.findIndex(v => v.id === proposal.entryId);
-  if (at < 0 || resume.volunteering[at].achievements !== proposal.before) throw new Error(ROLE_CHANGED);
+  if (at < 0 || resume.volunteering[at].achievements !== proposal.before) throw new Error(roleChangedMessage(proposal.label));
   return { ...resume, volunteering: resume.volunteering.map((v, i) => (i === at ? { ...v, achievements: proposal.after } : v)) };
 }
 
@@ -112,9 +118,13 @@ export function cutPlan(w: Workspace, now: Date = new Date(), dismissed: Readonl
     return [{ proposal, endMonth, order: role.order }];
   }).sort((a, b) => a.endMonth - b.endMonth || a.order - b.order);
   const proposals: CutProposal[] = [];
+  const seen = new Set<string>();
   let resume = w.resume;
   for (const { proposal } of candidates) {
     if (cvWords(resume) <= limit) break;
+    // Ids are section plus entry id; saved CVs keep entry ids unique, but a repeat is skipped rather than shown twice.
+    if (seen.has(proposal.id)) continue;
+    seen.add(proposal.id);
     resume = applyCut(resume, proposal);
     proposals.push(proposal);
   }

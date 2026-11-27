@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ZOOM, MIN_HEIGHT, MIN_WIDTH, ZOOM_STEPS, defaultBox, fitBox, moveBox, parseBox, parseZoom, resizeBox, resizeFromEdge, stepZoom } from './preview-window';
+import { DEFAULT_ZOOM, MIN_HEIGHT, MIN_WIDTH, ZOOM_STEPS, defaultBox, escapeClosesPreview, fitBox, moveBox, parseBox, parseZoom, resizeBox, resizeFromEdge, stepZoom } from './preview-window';
 
 const view = { width: 1440, height: 900 };
 
@@ -104,5 +104,18 @@ describe('preview zoom', () => {
     expect(stepZoom(100, -1)).toBe(90);
     expect(stepZoom(200, 1)).toBe(200);
     expect(stepZoom(50, -1)).toBe(50);
+  });
+});
+
+describe('Escape outside the floating preview', () => {
+  const base = { key: 'Escape', defaultPrevented: false, editable: false, modalOpen: false };
+  it('closes the preview from anywhere on the page', () => {
+    expect(escapeClosesPreview(base)).toBe(true);
+  });
+  it('leaves it open while typing, inside a dialog, after another control used the key, or for other keys', () => {
+    expect(escapeClosesPreview({ ...base, editable: true })).toBe(false);
+    expect(escapeClosesPreview({ ...base, modalOpen: true })).toBe(false);
+    expect(escapeClosesPreview({ ...base, defaultPrevented: true })).toBe(false);
+    expect(escapeClosesPreview({ ...base, key: 'Enter' })).toBe(false);
   });
 });

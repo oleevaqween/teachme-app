@@ -86,10 +86,17 @@ export function parseCvDate(text: string, edge: 'start' | 'end', now: Date = new
   if (/^(present|current|now|today)$/.test(value)) return edge === 'end' ? now.getFullYear() * 12 + now.getMonth() : null;
   let match = /^(\d{4})$/.exec(value);
   if (match) return Number(match[1]) * 12 + (edge === 'start' ? 0 : 11);
-  match = /^(\d{1,2})\/(\d{4})$/.exec(value);
+  // Month then year: 03/2021, 3-2021, 03.2021.
+  match = /^(\d{1,2})[/.-](\d{4})$/.exec(value);
   if (match) {
     const month = Number(match[1]);
     return month >= 1 && month <= 12 ? Number(match[2]) * 12 + month - 1 : null;
+  }
+  // Year then month (ISO style): 2019-03, 2019/03, 2019-03-15 (the day is not needed).
+  match = /^(\d{4})[/-](\d{1,2})(?:[/-]\d{1,2})?$/.exec(value);
+  if (match) {
+    const month = Number(match[2]);
+    return month >= 1 && month <= 12 ? Number(match[1]) * 12 + month - 1 : null;
   }
   match = /^([a-z]+)\.?\s+(\d{4})$/.exec(value);
   if (match) {
@@ -227,8 +234,9 @@ export function checkCv(resume: Resume, now: Date = new Date(), spelling: Spelli
   if (total < 300) add({ id: 'structure.short', category: 'structure', level: 'consider', title: 'Your CV is short', detail: `${total} words. Most strong CVs use 300 to ${target.long} words; add achievements, projects or skills you genuinely have.`, target: 'experience', pointsLost: 8 - totalPoints });
   if (total > target.long) add({ id: 'structure.long', category: 'structure', level: 'consider', title: 'Your CV is long', detail: `${total} words. ${target.advice}, and keep the full history in your master CV.`, target: 'experience', pointsLost: 8 - totalPoints });
   const summaryWords = words(resume.summary).length;
-  const summaryPoints = summaryWords >= 30 && summaryWords <= 90 ? 4 : (summaryWords >= 15 && summaryWords < 30) || (summaryWords > 90 && summaryWords <= 140) ? 2 : 0;
-  // Under 25 words the Completeness check already reports the summary; do not repeat it here.
+  // Under 25 words the Completeness check already reports (and scores) the summary: no repeat here, and no points
+  // taken here either, so every lost point has a finding that explains it.
+  const summaryPoints = summaryWords < 25 || (summaryWords >= 30 && summaryWords <= 90) ? 4 : summaryWords < 30 || summaryWords <= 140 ? 2 : 0;
   if (summaryWords >= 25 && summaryPoints < 4) {
     add({ id: 'structure.summary', category: 'structure', level: 'consider', title: summaryWords < 30 ? 'Expand your summary' : 'Tighten your summary', detail: `${summaryWords} words; 30 to 90 is a good length.`, target: 'summary', pointsLost: 4 - summaryPoints });
   }

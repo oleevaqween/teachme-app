@@ -25,6 +25,29 @@ export interface WebSearchOptions {
 const tvly = tavily({ apiKey: process.env.TAVILY_API_KEY ?? '' });
 
 /**
+ * Waits for the search, or stops as soon as the signal aborts (the Tavily client takes no signal of its own),
+ * so a caller's time limit really ends a slow search.
+ */
+function untilAborted<T>(work: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return work;
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('The operation was aborted.', 'AbortError'));
+    if (signal.aborted) return onAbort();
+    signal.addEventListener('abort', onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      }
+    );
+  });
+}
+
+/**
  * Searches the web for sources corroborating a factual claim.
  * Uses Tavily's search API which returns clean, verified content
  * optimized for AI grounding and citation.
@@ -46,11 +69,14 @@ export async function searchWeb(
   }
 
   try {
-    const response = await tvly.search(query, {
-      maxResults,
-      searchDepth: 'basic',
-      includeAnswer: false,
-    });
+    const response = await untilAborted(
+      tvly.search(query, {
+        maxResults,
+        searchDepth: 'basic',
+        includeAnswer: false,
+      }),
+      signal
+    );
 
     return (response.results ?? []).map((result) => ({
       url: result.url,
@@ -89,11 +115,14 @@ export async function searchWebForEnrichment(
   }
 
   try {
-    const response = await tvly.search(query, {
-      maxResults,
-      searchDepth: 'advanced',
-      includeAnswer: false,
-    });
+    const response = await untilAborted(
+      tvly.search(query, {
+        maxResults,
+        searchDepth: 'advanced',
+        includeAnswer: false,
+      }),
+      signal
+    );
 
     return (response.results ?? []).map((result) => ({
       url: result.url,

@@ -55,10 +55,14 @@ const AVERAGE_LETTER_WIDTH = 0.5, BOLD_LETTER_WIDTH = 0.56, CAPITAL_LETTER_WIDTH
 const lettersPerLine = (width: number, fontSize: number, letterWidth = AVERAGE_LETTER_WIDTH) => Math.max(8, Math.floor(width / (fontSize * letterWidth)));
 const sixLetterChunks = (run: string) => run.match(/(?:\P{M}\p{M}*){1,6}/gu) ?? [run];
 
+/** A bare web address: letters, digits and hyphens in dot-separated parts, ending in a letters-only part (.com, .co.uk). */
+const PLAIN_DOMAIN = /^(?:[\p{L}\p{N}-]+\.)+\p{L}{2,24}\.?$/u;
+
 function longWordBreaker(maxLetters: number) {
   return (word: string, hyphenate: (word: string) => string[] = w => [w]): string[] => {
     if (word.length <= Math.min(20, maxLetters)) return [word];
-    const address = /[@/]/.test(word);
+    // Addresses: anything with @ or /, or a plain domain such as example.com (no hyphen is ever added inside one).
+    const address = /[@/]/.test(word) || PLAIN_DOMAIN.test(word);
     const pieces = word.length > 20 ? (word.match(/[\p{L}\p{M}\p{N}([{]*[^\p{L}\p{M}\p{N}([{]*/gu) ?? []).filter(Boolean) : [word];
     if (!pieces.length) return [word];
     return pieces.flatMap((piece, i) => [...(i ? [''] : []), ...splitPiece(piece, maxLetters, address, hyphenate)]);

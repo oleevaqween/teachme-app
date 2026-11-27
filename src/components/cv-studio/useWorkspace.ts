@@ -121,6 +121,8 @@ export function useWorkspace() {
         if (raw) {
           const recovered = WorkspaceSchema.parse(JSON.parse(raw));
           if (JSON.stringify(recovered) !== persisted.current[recovered.id]) setRecovery(recovered);
+          // Nothing to recover: the copy matches what is saved, so the browser stops keeping a copy of the CV.
+          else localStorage.removeItem('teachme-cv-recovery');
         }
       } catch { setError('A browser recovery record could not be read. Your saved CVs are unaffected.'); }
       setLoaded(true);

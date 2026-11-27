@@ -4,7 +4,7 @@ import { Download, Eye, GripHorizontal, MoveDiagonal2, PanelRight, X, ZoomIn, Zo
 import type { Workspace } from '@/lib/cv-studio/schema';
 import { ExactPdfPreview } from './ExactPdfPreview';
 import { ResumePreview } from './ResumePreview';
-import { DEFAULT_ZOOM, PREVIEW_WINDOW_KEY, PREVIEW_ZOOM_KEY, ZOOM_STEPS, EDGES, defaultBox, fitBox, moveBox, parseBox, parseZoom, resizeBox, resizeFromEdge, stepZoom, type Box, type Edge } from './preview-window';
+import { DEFAULT_ZOOM, PREVIEW_WINDOW_KEY, PREVIEW_ZOOM_KEY, ZOOM_STEPS, EDGES, defaultBox, escapeClosesPreview, fitBox, moveBox, parseBox, parseZoom, resizeBox, resizeFromEdge, stepZoom, type Box, type Edge } from './preview-window';
 import { useRememberedText, useViewport } from './studio-prefs';
 import type { StudioController } from './useStudioController';
 
@@ -50,6 +50,7 @@ export function PreviewPane({ c, w, highlight, floating, onDock }: {
   const canvas = useRef<HTMLDivElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const grip = useRef<HTMLButtonElement>(null);
+  const windowRef = useRef<HTMLElement>(null);
   const focusAfterToggle = useRef(false);
   const [fitWidth, setFitWidth] = useState(0);
 
@@ -64,6 +65,21 @@ export function PreviewPane({ c, w, highlight, floating, onDock }: {
     focusAfterToggle.current = true;
     setOpen(next);
   }
+
+  // Escape closes the floating preview from anywhere on the page (inside it, its own handler does this and moves
+  // focus to the Preview button). Outside it, focus stays where it is.
+  useEffect(() => {
+    if (!floating || !open) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && windowRef.current?.contains(target)) return;
+      const editable = !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+      const modalOpen = !!document.querySelector('[aria-modal="true"], dialog[open]');
+      if (escapeClosesPreview({ key: event.key, defaultPrevented: event.defaultPrevented, editable, modalOpen })) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [floating, open]);
 
   // Zooming scales the page drawn at the width it has at 100%, so the text never reflows.
   useEffect(() => {
@@ -122,7 +138,7 @@ export function PreviewPane({ c, w, highlight, floating, onDock }: {
   const zoomStyle: CSSProperties | undefined = zoom !== DEFAULT_ZOOM && fitWidth > 0 ? { width: fitWidth, zoom: String(zoom / 100) } : undefined;
 
   return (
-    <aside className="studio-preview" data-floating={floating || undefined} data-dragging={dragging ? true : undefined} style={windowStyle} aria-label="CV preview"
+    <aside ref={windowRef} className="studio-preview" data-floating={floating || undefined} data-dragging={dragging ? true : undefined} style={windowStyle} aria-label="CV preview"
       onKeyDown={floating ? e => { if (e.key === 'Escape') { e.stopPropagation(); toggleOpen(false); } } : undefined}>
       <div className="preview-top" onPointerDown={floating ? e => startDrag(e, 'move') : undefined}>
         <span>

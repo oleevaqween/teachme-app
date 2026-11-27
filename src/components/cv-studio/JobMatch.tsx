@@ -22,19 +22,27 @@ export const TERM_GAP_FOCUS = 'button, a';
  * After a user action the pressed button is replaced; moves focus to the first control of the replacement so keyboard users
  * are not dropped. Does nothing unless an action just happened; returns whether it acted.
  */
-export function focusAfterAction(acted: { current: boolean }, root: Pick<ParentNode, 'querySelector'> | null): boolean {
-  if (!acted.current) return false;
-  acted.current = false;
-  root?.querySelector<HTMLElement>(TERM_GAP_FOCUS)?.focus();
+/** A status change this soon after a click is that click's result; anything later is not, so focus stays put. */
+export const FOCUS_WINDOW_MS = 2000;
+
+/**
+ * After the user's own action changes a term's status, focus moves to the first control of the new state.
+ * `acted` holds when the click happened (or null); it is cleared here, and a change long after the click is ignored.
+ */
+export function focusAfterAction(acted: { current: number | null }, root: Pick<ParentNode, 'querySelector'> | null, now: number = Date.now()): boolean {
+  const at = acted.current;
+  acted.current = null;
+  if (at === null || now - at > FOCUS_WINDOW_MS || !root) return false;
+  root.querySelector<HTMLElement>(TERM_GAP_FOCUS)?.focus();
   return true;
 }
 
 /** Truthful choices for a job-advert term the CV does not mention; nothing here edits the CV. While TeachMe is busy the learning link is plain text. */
 export function TermGapControls({ term, importance, status, actions, busy = false }: { term: string; importance: TermImportance; status: TermGapStatus; actions: TermGapActions; busy?: boolean }) {
   const root = useRef<HTMLSpanElement>(null);
-  const acted = useRef(false);
+  const acted = useRef<number | null>(null);
   useEffect(() => { focusAfterAction(acted, root.current); }, [status.kind]);
-  const act = (run: () => void) => () => { acted.current = true; run(); };
+  const act = (run: () => void) => () => { acted.current = Date.now(); run(); };
   if (status.kind === 'not-held') return <span className="term-gap" aria-live="polite" ref={root}>
     <span>You said you don&apos;t have this yet.</span>
     {busy

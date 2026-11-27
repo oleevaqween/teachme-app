@@ -81,9 +81,10 @@ export function PracticeSession({ applicationId }: { applicationId: string }) {
         if (!wanted) return;
         claimFromUrl.current = null;
         setBusy('claim');
-        abort.current = new AbortController();
+        const controller = new AbortController();
+        abort.current = controller;
         try {
-          const opened = await postClaim(applicationId, wanted, false, abort.current.signal);
+          const opened = await postClaim(applicationId, wanted, false, controller.signal);
           if (cancelled) return;
           setData(d => (d && !d.questions.some(q => q.key === opened.question.key) ? { ...d, questions: [...d.questions, opened.question] } : d));
           setSelectedKey(opened.question.key);
@@ -93,9 +94,13 @@ export function PracticeSession({ applicationId }: { applicationId: string }) {
           window.history.replaceState(null, '', window.location.pathname + (search ? '?' + search : ''));
           if (opened.fallback) setNotice(CLAIM_FALLBACK);
         } catch (e) {
-          if (!cancelled) setActionError(e instanceof Error && e.name === 'AbortError' ? 'Cancelled.' : e instanceof Error ? e.message : 'Could not open this claim.');
+          const aborted = e instanceof Error && e.name === 'AbortError';
+          if (!cancelled) setActionError(aborted ? 'Cancelled.' : e instanceof Error ? e.message : 'Could not open this claim.');
+          // The server may have saved the question before Cancel: read the list again so the screen matches it.
+          if (aborted && !cancelled) setReloadTick(t => t + 1);
         } finally {
-          if (!cancelled) { setBusy(''); abort.current = null; }
+          // Always end this request's busy state, even if the page moved on, unless a newer request took over.
+          if (abort.current === controller) { setBusy(''); abort.current = null; }
         }
       })
       .catch(e => { if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load this practice session.'); });
@@ -207,6 +212,8 @@ export function PracticeSession({ applicationId }: { applicationId: string }) {
       if (opened.fallback) setNotice(CLAIM_FALLBACK);
     } catch (e) {
       setActionError(failureMessage(e, 'Could not get a different question.', 'Cancelled.'));
+      // The server may have saved the new question before Cancel: read the list again so the screen matches it.
+      if (e instanceof Error && e.name === 'AbortError') setReloadTick(t => t + 1);
     } finally {
       setBusy('');
       abort.current = null;

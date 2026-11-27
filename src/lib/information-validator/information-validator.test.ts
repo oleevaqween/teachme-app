@@ -1,4 +1,29 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+
+// A stand-in for the Tavily search service, so these tests never use the internet or a real key.
+const tavilyMock = vi.hoisted(() => ({ search: vi.fn() }));
+vi.mock('@tavily/core', () => ({ tavily: () => ({ search: (...args: unknown[]) => tavilyMock.search(...args) }) }));
+
+const threeResults = {
+  results: [
+    { url: 'https://example.org/a', title: 'Source A', content: 'First source text.' },
+    { url: 'https://example.org/b', title: 'Source B', content: 'Second source text.' },
+    { url: 'https://example.org/c', title: 'Source C', content: 'Third source text.' },
+  ],
+};
+
+beforeEach(() => {
+  vi.stubEnv('TAVILY_API_KEY', 'test-key-not-real');
+  tavilyMock.search.mockReset();
+  tavilyMock.search.mockImplementation(async (_query: string, options?: { maxResults?: number }) => ({
+    results: threeResults.results.slice(0, options?.maxResults ?? 5),
+  }));
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
+
 import { verifyClaim, crossReferenceWithDocument, verifyBatch } from './index';
 import { assignConfidenceLevel, meetsVerificationThreshold } from './confidence-scorer';
 import { searchWeb } from './web-search';
@@ -55,6 +80,20 @@ describe('web-search', () => {
   it('respects maxResults option', async () => {
     const results = await searchWeb('quantum physics', { maxResults: 3 });
     expect(results.length).toBeLessThanOrEqual(3);
+  });
+
+  it('returns no results, without calling the service, when no key is set', async () => {
+    vi.stubEnv('TAVILY_API_KEY', '');
+    expect(await searchWeb('anything')).toEqual([]);
+    expect(tavilyMock.search).not.toHaveBeenCalled();
+  });
+
+  it('stops waiting when the signal aborts during a slow search', async () => {
+    tavilyMock.search.mockImplementation(() => new Promise(() => {}));
+    const controller = new AbortController();
+    const pending = searchWeb('slow query', { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toThrow(/abort/i);
   });
 
   it('throws on aborted signal', async () => {
@@ -145,12 +184,21 @@ describe('verifyClaim', () => {
     expect(['High', 'Medium', 'Low']).toContain(result.confidenceLevel);
   });
 
-  it('returns timedOut=true when timeout expires', async () => {
-    // Use an extremely short timeout to trigger timeout
-    const result = await verifyClaim('Some claim to verify', 1);
-    // With 1ms timeout, the async search should be aborted
+  it('returns timedOut=true when the search is still running at the time limit', async () => {
+    // A search that never answers: only the time limit can end it.
+    tavilyMock.search.mockImplementation(() => new Promise(() => {}));
+    const result = await verifyClaim('Some claim to verify', 20);
     expect(result.timedOut).toBe(true);
     expect(result.verified).toBe(false);
+  });
+
+  it('is unverified, not an error, when the search service fails', async () => {
+    const quiet = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    tavilyMock.search.mockRejectedValue(new Error('service unavailable'));
+    const result = await verifyClaim('Some claim to verify');
+    expect(result.verified).toBe(false);
+    expect(result.timedOut).toBe(false);
+    quiet.mockRestore();
   });
 });
 

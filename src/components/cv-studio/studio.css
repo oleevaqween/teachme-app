@@ -333,6 +333,8 @@ a.text-button{display:inline;border:0;background:none;padding:0;white-space:norm
 .studio-rail[data-collapsed] .rail-badge{position:absolute;top:0;right:0;margin:0;font-size:10px;line-height:15px;padding:0 4px;pointer-events:none}
 .rail-move{position:absolute;right:2px;top:50%;transform:translateY(-50%);display:flex;border-radius:6px;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .15s}
 .rail-row:hover .rail-move,.rail-row:focus-within .rail-move{opacity:1;pointer-events:auto}
+/* Touch screens have no hover: the move arrows stay visible so sections can be reordered by tapping. */
+@media (hover:none){.rail-move{opacity:1;pointer-events:auto}}
 .preview-actions{display:flex;gap:6px;align-items:center}
 .studio-preview[data-floating]{position:fixed;right:20px;top:80px;bottom:20px;width:min(460px,calc(100vw - 40px));z-index:40;display:flex;flex-direction:column;box-shadow:0 20px 60px oklch(0 0 0 / .25)}
 .studio-preview[data-floating] .preview-top{cursor:move;touch-action:none;user-select:none}
@@ -502,7 +504,8 @@ a.text-button{display:inline;border:0;background:none;padding:0;white-space:norm
 .cut-panel { display: grid; gap: 0.75rem; margin-top: 0.5rem; }
 .cut-proposal { border: 1px solid var(--studio-border, rgba(127, 127, 127, 0.35)); border-radius: 0.5rem; padding: 0.75rem; }
 .cut-proposal ul { margin: 0.25rem 0; padding-left: 1.25rem; }
-.cut-proposal del { opacity: 0.75; }
+/* Removed lines: the theme's muted text colour (readable in light and dark), not transparency. */
+.cut-proposal del { color: var(--muted-foreground); }
 
 .letter-specificity { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.25rem; }
 .letter-specificity .pass::before { content: '✓ '; }

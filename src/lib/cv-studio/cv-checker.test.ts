@@ -281,6 +281,18 @@ describe('checkCv fairness rules', () => {
     expect(titles(check)).not.toContain('Expand your summary');
   });
 
+  it('takes no unexplained Length & structure points for a summary already reported under Completeness', () => {
+    const structure = (summary: string) => checkCv({ ...strong(), summary }).categories.find(c => c.id === 'structure')!.earned;
+    const full = structure(strong().summary);
+    expect(structure('Project manager in logistics.')).toBe(full);
+    expect(structure('')).toBe(full);
+    // From 25 words the summary is no longer a Completeness finding, so Length & structure explains its own points.
+    const twentySix = Array.from({ length: 26 }, (_, i) => 'word' + i).join(' ');
+    const check = checkCv({ ...strong(), summary: twentySix });
+    expect(check.categories.find(c => c.id === 'structure')!.earned).toBeLessThan(full);
+    expect(titles(check)).toContain('Expand your summary');
+  });
+
   it('explains an invalid email', () => {
     const r = strong();
     r.personal = { ...r.personal, email: 'ada-at-example' };
@@ -297,8 +309,9 @@ describe('checkCv fairness rules', () => {
 
   it('scales the existing areas and adds Spelling & clarity worth 15', () => {
     const check = checkCv(empty());
-    expect(check.categories.map(c => c.earned)).toEqual([0, 15, 0, 6, 15]);
-    expect(check.score).toBe(36);
+    // Length & structure 9, not 6: the missing summary is scored once, under Completeness.
+    expect(check.categories.map(c => c.earned)).toEqual([0, 15, 0, 9, 15]);
+    expect(check.score).toBe(39);
     expect(check.spelling).toBe('pending');
   });
   it('adds spelling findings from a finished check and never lowers the score while pending or failed', () => {
@@ -343,6 +356,17 @@ describe('parseCvDate', () => {
     expect(parseCvDate('13/2020', 'start')).toBeNull();
     expect(parseCvDate('Present', 'start', now)).toBeNull();
     expect(parseCvDate('summer', 'end')).toBeNull();
+    expect(parseCvDate('2020-13', 'start')).toBeNull();
+    expect(parseCvDate('2020-00', 'start')).toBeNull();
+    expect(parseCvDate('2020-02-31x', 'start')).toBeNull();
+  });
+  it('reads ISO-style dates (year first) and month-year with a hyphen or dot', () => {
+    expect(parseCvDate('2019-03', 'start')).toBe(2019 * 12 + 2);
+    expect(parseCvDate('2019-3', 'end')).toBe(2019 * 12 + 2);
+    expect(parseCvDate('2019-03-15', 'start')).toBe(2019 * 12 + 2);
+    expect(parseCvDate('2019/03', 'start')).toBe(2019 * 12 + 2);
+    expect(parseCvDate('03-2019', 'start')).toBe(2019 * 12 + 2);
+    expect(parseCvDate('03.2019', 'start')).toBe(2019 * 12 + 2);
   });
 });
 

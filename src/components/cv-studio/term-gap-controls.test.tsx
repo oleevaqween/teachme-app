@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { focusAfterAction, TermGapControls, type TermGapActions } from './JobMatch';
+import { FOCUS_WINDOW_MS, focusAfterAction, TermGapControls, type TermGapActions } from './JobMatch';
 
 const noop = () => {};
 const actions: TermGapActions = { have: noop, lack: noop, undo: noop, open: noop, learn: noop };
@@ -61,14 +61,24 @@ describe('keyword gap controls while busy and after an action', () => {
     const focus = vi.fn();
     const selectors: string[] = [];
     const root = { querySelector: (selector: string) => { selectors.push(selector); return { focus }; } } as unknown as Pick<ParentNode, 'querySelector'>;
-    const acted = { current: false };
-    expect(focusAfterAction(acted, root)).toBe(false);
+    const acted: { current: number | null } = { current: null };
+    expect(focusAfterAction(acted, root, 10_000)).toBe(false);
     expect(focus).not.toHaveBeenCalled();
-    acted.current = true;
-    expect(focusAfterAction(acted, root)).toBe(true);
+    acted.current = 10_000;
+    expect(focusAfterAction(acted, root, 10_500)).toBe(true);
     expect(focus).toHaveBeenCalledTimes(1);
     expect(selectors).toEqual(['button, a']);
-    expect(acted.current).toBe(false);
-    expect(focusAfterAction(acted, null)).toBe(false);
+    expect(acted.current).toBeNull();
+    expect(focusAfterAction(acted, null, 10_600)).toBe(false);
+  });
+
+  it('does not move focus long after a click that changed nothing', () => {
+    const focus = vi.fn();
+    const root = { querySelector: () => ({ focus }) } as unknown as Pick<ParentNode, 'querySelector'>;
+    const acted: { current: number | null } = { current: 10_000 };
+    // An unrelated status change much later must not pull focus.
+    expect(focusAfterAction(acted, root, 10_000 + FOCUS_WINDOW_MS + 1)).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+    expect(acted.current).toBeNull();
   });
 });

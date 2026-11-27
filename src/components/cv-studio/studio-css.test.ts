@@ -303,3 +303,18 @@ describe('cascade guards', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('cut preview removed lines', () => {
+  it('uses the muted text colour, not transparency, so it stays readable in dark mode', () => {
+    const css = readFileSync(join(process.cwd(), 'src', 'components', 'cv-studio', 'studio.css'), 'utf8').replace(/\s+/g, '');
+    expect(css).toContain('.cut-proposaldel{color:var(--muted-foreground);}');
+    expect(css).not.toContain('.cut-proposaldel{opacity');
+  });
+});
+
+describe('rail move arrows on touch screens', () => {
+  it('shows the move arrows when the device cannot hover', () => {
+    const css = readFileSync(join(process.cwd(), 'src', 'components', 'cv-studio', 'studio.css'), 'utf8').replace(/\s+/g, '');
+    expect(css).toContain('@media(hover:none){.rail-move{opacity:1;pointer-events:auto}}');
+  });
+});

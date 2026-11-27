@@ -40,10 +40,14 @@ const PERSONAL: { id: string; title: string; pattern: RegExp }[] = [
     pattern: new RegExp(String.raw`\bdate of birth\b|(?<![a-z@])d\.?o\.?b(?![a-z@])(?!\.[a-z])|\bborn(?:[ \t]+on)?(?:[ \t]+the)?[ \t]*:?[ \t]*(?:\d|${MONTH}\b)|${LABEL}age\s*:\s*\d`, 'im') },
   { id: 'marital', title: 'Leave out your marital status',
     pattern: new RegExp(String.raw`\bmarital status\b|${LABEL}status\s*:\s*(?:married|single|divorced|widowed)\b`, 'im') },
-  { id: 'religion', title: 'Leave out your religion', pattern: new RegExp(String.raw`${LABEL}religion\s*:`, 'im') },
+  // A colon label, or (no colon) the label followed by a typical answer: "Religion Christian", "Religion - Islam".
+  { id: 'religion', title: 'Leave out your religion',
+    pattern: new RegExp(String.raw`${LABEL}religion\s*(?::|[-–]?\s*(?:christian(?:ity)?|muslim|islam|catholic|protestant|anglican|methodist|pentecostal|baptist|orthodox|hindu(?:ism)?|buddhist|jewish|sikh|atheist|traditional)\b)`, 'im') },
   { id: 'origin', title: 'Leave out your state of origin',
     pattern: new RegExp(String.raw`\bstate of origin\b|${LABEL}l\.?g\.?a\.?\s*(?::|of origin)`, 'im') },
-  { id: 'gender', title: 'Leave out your gender', pattern: new RegExp(String.raw`${LABEL}(?:gender|sex)\s*:`, 'im') },
+  // A colon label, or (no colon) the label followed by an answer: "Gender Male", "Sex - F".
+  { id: 'gender', title: 'Leave out your gender',
+    pattern: new RegExp(String.raw`${LABEL}(?:gender|sex)\s*(?::|[-–]?\s*(?:male|female|man|woman|m|f|non-binary)(?![a-z]))`, 'im') },
 ];
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const PHONE = /\+?[\d(][\d\s().-]{5,}\d/g;

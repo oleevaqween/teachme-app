@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Layout, Workspace } from '@/lib/cv-studio/schema';
 import { templateIds, templates } from '@/lib/cv-studio/templates';
-import { accentIds, accentPresets, colourCheck, DEFAULT_CUSTOM, fontPairIds, fontPairs } from '@/lib/cv-studio/design';
+import { accentIds, accentPresets, colourCheck, DEFAULT_CUSTOM, fontPairIds, fontPairs, normalizeHex } from '@/lib/cv-studio/design';
 import { columnPlan, columnStyles, columnStyleDescriptions, columnStyleNames, COLUMNS_ATS_NOTE, COLUMNS_EMPTY_NOTE, sideSet, toggleSide } from '@/lib/cv-studio/columns';
 import { repairOrder, sectionNames } from '@/lib/cv-studio/sections';
 import { TemplateFontSample } from '../TemplateFontSample';
@@ -15,12 +15,22 @@ export function DesignPanel({ c, w }: { c: StudioController; w: Workspace }) {
   const { update } = c;
   const [custom, setCustom] = useState(w.layout.customAccent ?? DEFAULT_CUSTOM);
   const [customOpen, setCustomOpen] = useState(w.layout.accent === 'custom');
+  // When the CV's colour changes from outside this panel (Undo, Redo, another CV), the editor follows it.
+  // Adjusting state while rendering is React's pattern for this; a half-typed code is local and not saved, so it stays.
+  const [seen, setSeen] = useState({ accent: w.layout.accent, customAccent: w.layout.customAccent });
+  if (seen.accent !== w.layout.accent || seen.customAccent !== w.layout.customAccent) {
+    setSeen({ accent: w.layout.accent, customAccent: w.layout.customAccent });
+    if (seen.customAccent !== w.layout.customAccent) setCustom(w.layout.customAccent ?? DEFAULT_CUSTOM);
+    setCustomOpen(w.layout.accent === 'custom');
+  }
   const check = colourCheck(custom);
   const plan = columnPlan(w.layout, w.resume), side = sideSet(w.layout), columnsNow = w.layout.columns ?? 'one';
   const setLayout = (patch: Partial<Layout>) => update({ layout: { ...w.layout, ...patch } });
   function chooseCustom(value: string) {
-    setCustom(value);
-    if (colourCheck(value).ok) setLayout({ accent: 'custom', customAccent: value.toLowerCase() });
+    // A six-digit code typed without '#' is accepted and shown with it.
+    const hex = normalizeHex(value);
+    setCustom(hex ?? value);
+    if (hex && colourCheck(hex).ok) setLayout({ accent: 'custom', customAccent: hex });
   }
   const pickerRef = useRef<HTMLInputElement>(null);
   const showEditor = customOpen || w.layout.accent === 'custom';
