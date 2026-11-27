@@ -10,7 +10,7 @@ export type CutProposal = {
   /** The role's achievements when the proposal was made; applying refuses if they have changed. */
   before: string; after: string; kept: string[]; removed: string[];
 };
-export type CutPlan = { proposals: CutProposal[]; before: number; after: number; limit: number; marketLabel: string; overBy: number; nothingQualifies: boolean };
+export type CutPlan = { proposals: CutProposal[]; before: number; after: number; limit: number; marketLabel: string; overBy: number; nothingQualifies: boolean; allDismissed: boolean };
 
 export const ROLE_CHANGED = 'This role has changed since the suggestions were made. Press Suggest cuts again.';
 
@@ -88,20 +88,22 @@ export function cutPlan(w: Workspace, now: Date = new Date(), dismissed: Readonl
   const market = w.market ?? 'international';
   const limit = lengthTarget(market, w.resume, now).long;
   const before = cvWords(w.resume);
-  const empty: CutPlan = { proposals: [], before, after: before, limit, marketLabel: marketLabels[market], overBy: Math.max(0, before - limit), nothingQualifies: false };
+  const empty: CutPlan = { proposals: [], before, after: before, limit, marketLabel: marketLabels[market], overBy: Math.max(0, before - limit), nothingQualifies: false, allDismissed: false };
   if (w.kind !== 'application' || before <= limit) return { ...empty, overBy: 0 };
   const terms = analysisMatchesJob(w) && w.analysis?.keywords ? verifiedKeywords(w.jobDescription, w.analysis.keywords).map(k => k.term) : [];
   const roles = [
     ...w.resume.experience.map((e, order) => ({ section: 'experience' as const, id: e.id, label: roleLabel(e.title, e.company), startDate: e.startDate, endDate: e.endDate, achievements: e.achievements, order })),
     ...w.resume.volunteering.map((v, order) => ({ section: 'volunteering' as const, id: v.id, label: roleLabel(v.role, v.organisation), startDate: v.startDate, endDate: v.endDate, achievements: v.achievements, order: w.resume.experience.length + order })),
   ];
+  // Qualifying roles the user dismissed: when only these would have been proposed, the advice says so (C3).
+  let dismissedQualifying = 0;
   const candidates = roles.flatMap(role => {
-    if (dismissed.has(`${role.section}.${role.id}`)) return [];
     const endMonth = parseCvDate(role.endDate, 'end', now);
     const keep = endMonth === null ? null : keepCount(endMonth, now);
     if (endMonth === null || keep === null) return [];
     const cut = cutLines(role.achievements, keep, terms);
     if (!cut.removed.length) return [];
+    if (dismissed.has(`${role.section}.${role.id}`)) { dismissedQualifying += 1; return []; }
     const proposal: CutProposal = {
       id: `${role.section}.${role.id}`, section: role.section, entryId: role.id, label: role.label,
       dates: [role.startDate.trim(), role.endDate.trim()].filter(Boolean).join(' – '),
@@ -117,7 +119,7 @@ export function cutPlan(w: Workspace, now: Date = new Date(), dismissed: Readonl
     proposals.push(proposal);
   }
   const after = cvWords(resume);
-  return { ...empty, proposals, after, overBy: Math.max(0, after - limit), nothingQualifies: proposals.length === 0 };
+  return { ...empty, proposals, after, overBy: Math.max(0, after - limit), nothingQualifies: proposals.length === 0, allDismissed: proposals.length === 0 && dismissedQualifying > 0 };
 }
 
 export function cutSummary(plan: CutPlan): string {
@@ -125,6 +127,7 @@ export function cutSummary(plan: CutPlan): string {
 }
 
 export function cutAdvice(plan: CutPlan): string | null {
+  if (plan.allDismissed) return "You've dismissed every suggested cut. Trim your recent roles yourself, or shorten the summary. Reload the page to bring the suggestions back.";
   if (plan.nothingQualifies) return 'No older roles to trim. Trim your recent roles yourself, or shorten the summary.';
   if (plan.overBy > 0) return `Still ${plan.overBy} words over. Trim your recent roles yourself, or shorten the summary.`;
   return null;

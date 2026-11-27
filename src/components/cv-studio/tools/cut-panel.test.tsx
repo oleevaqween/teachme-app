@@ -9,7 +9,7 @@ import { CutAction, CutPanel, cutFocusTarget } from './CutPanel';
 
 const noop = () => {};
 const plan = (extra: Partial<CutPlan> = {}): CutPlan => ({
-  before: 780, after: 540, limit: 550, marketLabel: 'US', overBy: 0, nothingQualifies: false,
+  before: 780, after: 540, limit: 550, marketLabel: 'US', overBy: 0, nothingQualifies: false, allDismissed: false,
   proposals: [
     { id: 'experience.old', section: 'experience', entryId: 'old', label: 'Manager · Org old', dates: '2000 – 2008', before: 'x', after: '', kept: [], removed: ['Attended meetings', 'Filed papers'] },
     { id: 'experience.mid', section: 'experience', entryId: 'mid', label: 'Lead · Org mid', dates: '2009 – 2013', before: 'y', after: 'z', kept: ['Led 3 teams'], removed: ['Booked rooms'] },
@@ -41,6 +41,12 @@ describe('cut and condense on screen', () => {
     const html = renderToStaticMarkup(<CutPanel plan={plan({ proposals: [], nothingQualifies: true, after: 780 })} busy={false} onApply={noop} onDismiss={noop} onApplyAll={noop} />);
     expect(html).toContain('No older roles to trim.');
     expect(html).not.toContain('Apply all');
+  });
+  it('says the cuts were dismissed when every suggestion was dismissed', () => {
+    const html = renderToStaticMarkup(<CutPanel plan={plan({ proposals: [], nothingQualifies: true, allDismissed: true, after: 780 })} busy={false} onApply={noop} onDismiss={noop} onApplyAll={noop} />);
+    expect(html).toContain('dismissed every suggested cut');
+    expect(html).toContain('Reload the page to bring the suggestions back.');
+    expect(html).not.toContain('No older roles to trim.');
   });
 });
 

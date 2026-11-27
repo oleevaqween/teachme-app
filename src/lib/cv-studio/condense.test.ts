@@ -71,7 +71,7 @@ describe('cut plan', () => {
   it('uses the market limit and says when nothing qualifies', () => {
     const recentOnly = sized([role('new', 'Present', OLD)], 50);
     const plan = cutPlan(app(recentOnly), NOW);
-    expect(plan).toMatchObject({ proposals: [], nothingQualifies: true });
+    expect(plan).toMatchObject({ proposals: [], nothingQualifies: true, allDismissed: false });
     expect(cutAdvice(plan)).toBe('No older roles to trim. Trim your recent roles yourself, or shorten the summary.');
     const us = cutPlan(app({ ...recentOnly, experience: [{ ...recentOnly.experience[0], startDate: '2020' }] }, { market: 'us' }), NOW);
     expect(us).toMatchObject({ limit: 550, marketLabel: 'US' });
@@ -174,5 +174,21 @@ describe('dismissed roles', () => {
     expect(cutPlan(app(resume), NOW).proposals.map(p => p.id)).toEqual(['experience.a']);
     expect(cutPlan(app(resume), NOW, new Set(['experience.a'])).proposals.map(p => p.id)).toEqual(['experience.b']);
     expect(cutPlan(app(resume), NOW, new Set(['experience.a', 'experience.b']))).toMatchObject({ proposals: [], nothingQualifies: true });
+  });
+  it('says the suggestions were dismissed (not that no older roles exist) when every qualifying role was dismissed', () => {
+    const resume = sized([role('a', '2008', OLD), role('b', '2009', OLD)], 5);
+    const plan = cutPlan(app(resume), NOW, new Set(['experience.a', 'experience.b']));
+    expect(plan).toMatchObject({ proposals: [], nothingQualifies: true, allDismissed: true });
+    expect(cutAdvice(plan)).toBe("You've dismissed every suggested cut. Trim your recent roles yourself, or shorten the summary. Reload the page to bring the suggestions back.");
+  });
+  it('keeps the no-older-roles advice when a dismissed role would not have qualified anyway', () => {
+    const recentOnly = sized([role('new', 'Present', OLD)], 50);
+    const plan = cutPlan(app(recentOnly), NOW, new Set(['experience.new']));
+    expect(plan).toMatchObject({ proposals: [], nothingQualifies: true, allDismissed: false });
+    expect(cutAdvice(plan)).toBe('No older roles to trim. Trim your recent roles yourself, or shorten the summary.');
+  });
+  it('is not all-dismissed while a qualifying role is still proposed', () => {
+    const resume = sized([role('a', '2008', OLD), role('b', '2009', OLD)], 5);
+    expect(cutPlan(app(resume), NOW, new Set(['experience.a']))).toMatchObject({ allDismissed: false });
   });
 });
