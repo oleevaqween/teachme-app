@@ -5,6 +5,9 @@ import { dueCards, type CardView, type ReviewResult } from '@/lib/teaching-sessi
 
 export type FlashcardsStatus = 'loading' | 'ready' | 'load-error' | 'unavailable';
 
+/** A card being added (id null) or edited. Kept in the hook, so closing the popup (also by Escape) keeps it. */
+export type CardDraft = { id: string | null; front: string; back: string };
+
 /** The action in progress, if any. Kept in the hook, so closing and reopening the popup cannot start a second one. */
 export type FlashcardsBusy = 'add' | 'edit' | 'remove' | 'review' | 'generate' | null;
 
@@ -36,6 +39,9 @@ export function useStageFlashcards(journeyId: string, stageId: string) {
   }, []);
   const [loadRequest, setLoadRequest] = useState(0);
   const [busy, setBusy] = useState<FlashcardsBusy>(null);
+  const [draftState, setDraftState] = useState<{ base: string; draft: CardDraft | null }>({ base, draft: null });
+  const draft = draftState.base === base ? draftState.draft : null;
+  const setDraft = useCallback((next: CardDraft | null) => setDraftState({ base, draft: next }), [base]);
   const busyRef = useRef(false);
 
   /** Runs one action at a time; a second one while another is saving is turned away. */
@@ -147,7 +153,7 @@ export function useStageFlashcards(journeyId: string, stageId: string) {
 
   const dueCount = current.status === 'ready' ? dueCards(current.cards, new Date(current.at)).length : 0;
 
-  return { cards: current.cards, status: current.status, dueCount, busy, add, edit, remove, review, generate, reload };
+  return { cards: current.cards, status: current.status, dueCount, busy, draft, setDraft, add, edit, remove, review, generate, reload };
 }
 
 export type StageFlashcardsApi = ReturnType<typeof useStageFlashcards>;

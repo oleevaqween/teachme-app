@@ -23,11 +23,13 @@ export default function MockQuestionsPage() {
     currentQuestionIndex,
     attempts,
     answers,
+    answerMeta,
     isLoading,
     error,
     setQuestions,
     addAttempt,
     setAnswer,
+    setAnswerMeta,
     nextQuestion,
     previousQuestion,
     setLoading,
@@ -35,7 +37,9 @@ export default function MockQuestionsPage() {
     addArchivedQuestion,
   } = useInterviewStore();
 
-  const [isScoring, setIsScoring] = useState(false);
+  // The draft being scored (its draftKey), or null. Only that answer shows "Scoring…" and its Cancel.
+  const [scoringKey, setScoringKey] = useState<string | null>(null);
+  const isScoring = scoringKey !== null;
   const [isArchiving, setIsArchiving] = useState(false);
   const [target, setTarget] = useState<AnswerTarget | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -123,7 +127,7 @@ export default function MockQuestionsPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setIsScoring(true);
+    setScoringKey(key);
     setActionError(null);
     try {
       const response = await fetch("/api/interview/score", {
@@ -161,12 +165,14 @@ export default function MockQuestionsPage() {
       });
       setAnswer(key, "");
       setTarget(null);
+      // Cleared after the box has gone away (its leave report would otherwise save the old time again).
+      setTimeout(() => setAnswerMeta(key, null), 0);
     } catch (error) {
       // A cancelled request keeps the answer in the box and shows no error.
       if (!isCancelled(error)) setActionError("Failed to score your answer. Please check your connection.");
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
-      setIsScoring(false);
+      setScoringKey(null);
     }
   }
 
@@ -331,9 +337,18 @@ export default function MockQuestionsPage() {
                   disabled={isScoring}
                   initialText={answers[currentDraftKey] ?? ""}
                   onTextChange={(text) => setAnswer(currentDraftKey, text)}
+                  initialMeta={answerMeta[currentDraftKey]}
+                  onLeave={(meta) => {
+                    if ((answers[currentDraftKey] ?? "").trim() || meta.seconds > 0) setAnswerMeta(currentDraftKey, meta);
+                  }}
                   onSubmit={(submission) => void submit(submission)}
                 />
-                {isScoring && (
+                {isScoring && scoringKey !== currentDraftKey && (
+                  <p role="status" className="text-small text-muted-foreground">
+                    Another answer is being scored. You can send this one when it has finished.
+                  </p>
+                )}
+                {scoringKey === currentDraftKey && (
                   <div role="status" className="flex items-center gap-2 text-small text-muted-foreground">
                     <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     Scoring your answer…

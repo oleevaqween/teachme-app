@@ -7,13 +7,21 @@ import type { FeedbackView } from '@/lib/practice/schema';
 /** One scored answer in quick practice; kept in memory only, never saved. */
 export type QuickAttempt = FeedbackView & { id: string; createdAt: string };
 
+/** What a draft carries besides its text, so a returned-to answer keeps its time and input method. */
+export type AnswerMeta = { seconds: number; typed: boolean; spoken: boolean };
+
 export interface InterviewState {
   role: string;
   questions: MockQuestion[];
   currentQuestionIndex: number;
   attempts: Record<string, QuickAttempt[]>;
-  /** Answer text per question id: the draft while typing, then the submitted answer. */
+  /**
+   * Half-typed answer text per answer box, keyed by draftKey (question id plus "main" or the follow-up id).
+   * Cleared once that answer has been scored.
+   */
   answers: Record<string, string>;
+  /** Per answer box, like `answers`: seconds spent on the draft and how it was entered, kept when leaving the box. */
+  answerMeta: Record<string, AnswerMeta>;
   archivedQuestions: ArchivedQuestion[];
   isLoading: boolean;
   error: string | null;
@@ -25,6 +33,8 @@ export interface InterviewState {
   goToQuestion: (index: number) => void;
   addAttempt: (questionId: string, attempt: QuickAttempt) => void;
   setAnswer: (questionId: string, answer: string) => void;
+  /** Saves (or with null, clears) a draft's time and input method. */
+  setAnswerMeta: (key: string, meta: AnswerMeta | null) => void;
   setArchivedQuestions: (questions: ArchivedQuestion[]) => void;
   addArchivedQuestion: (question: ArchivedQuestion) => void;
   removeArchivedQuestion: (questionId: string) => void;
@@ -39,6 +49,7 @@ export const useInterviewStore = create<InterviewState>((set) => ({
   currentQuestionIndex: 0,
   attempts: {},
   answers: {},
+  answerMeta: {},
   archivedQuestions: [],
   isLoading: false,
   error: null,
@@ -46,7 +57,7 @@ export const useInterviewStore = create<InterviewState>((set) => ({
   setRole: (role) => set({ role }),
 
   setQuestions: (questions) =>
-    set({ questions, currentQuestionIndex: 0, attempts: {}, answers: {} }),
+    set({ questions, currentQuestionIndex: 0, attempts: {}, answers: {}, answerMeta: {} }),
 
   nextQuestion: () =>
     set((state) => ({
@@ -78,6 +89,14 @@ export const useInterviewStore = create<InterviewState>((set) => ({
     set((state) => ({
       answers: { ...state.answers, [questionId]: answer },
     })),
+
+  setAnswerMeta: (key, meta) =>
+    set((state) => {
+      const answerMeta = { ...state.answerMeta };
+      if (meta) answerMeta[key] = meta;
+      else delete answerMeta[key];
+      return { answerMeta };
+    }),
 
   setArchivedQuestions: (questions) => set({ archivedQuestions: questions }),
 
@@ -111,6 +130,7 @@ export const useInterviewStore = create<InterviewState>((set) => ({
       currentQuestionIndex: 0,
       attempts: {},
       answers: {},
+      answerMeta: {},
       archivedQuestions: [],
       isLoading: false,
       error: null,

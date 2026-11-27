@@ -62,6 +62,17 @@ describe('StageFlashcards', () => {
     expect(html).toContain('role="tabpanel" id="flashcards-panel-review" aria-labelledby="flashcards-tab-review"');
   });
 
+  it('opens on the All cards tab with the half-typed card when one is waiting from before', () => {
+    const html = render({
+      cards: [card('a', now.toISOString())],
+      draft: { id: null, front: 'Half a question', back: '' },
+      setDraft: () => {},
+    });
+    expect(html).toMatch(/aria-selected="true"[^>]*>All cards \(1\)/);
+    expect(html).toContain('Half a question');
+    expect(html).toContain('Save card');
+  });
+
   it('names Edit and Delete after their card', () => {
     const html = render({ cards: [card('a', now.toISOString())], initialTab: 'cards' });
     expect(html).toContain('aria-label="Edit card: Question a?"');

@@ -8,7 +8,7 @@ import { SPEECH_NOTE, SPEECH_NOTE_KEY, appendSpokenText, inputMethodFor, useSpee
 
 export type AnswerSubmission = { answer: string; durationSeconds: number; inputMethod: InputMethod };
 
-export function AnswerBox({ disabled, hidden = false, onSubmit, onDraftChange, initialText = '', onTextChange }: {
+export function AnswerBox({ disabled, hidden = false, onSubmit, onDraftChange, initialText = '', onTextChange, initialMeta, onLeave }: {
   disabled: boolean;
   hidden?: boolean;
   onSubmit: (submission: AnswerSubmission) => void;
@@ -17,12 +17,22 @@ export function AnswerBox({ disabled, hidden = false, onSubmit, onDraftChange, i
   initialText?: string;
   /** Called with the full text after every change, typed or spoken. */
   onTextChange?: (text: string) => void;
+  /** A returned-to draft's seconds and input method, so its time does not restart at 0:00. */
+  initialMeta?: { seconds: number; typed: boolean; spoken: boolean };
+  /** Called when the box goes away (another question, Cancel) with the draft's seconds and input method. */
+  onLeave?: (meta: { seconds: number; typed: boolean; spoken: boolean }) => void;
 }) {
   const [text, setText] = useState(initialText);
-  const [typed, setTyped] = useState(false);
-  const [spoken, setSpoken] = useState(false);
+  const [typed, setTyped] = useState(initialMeta?.typed ?? false);
+  const [spoken, setSpoken] = useState(initialMeta?.spoken ?? false);
   const [showNote, setShowNote] = useState(false);
-  const timer = useAnswerTimer();
+  const timer = useAnswerTimer(initialMeta?.seconds ?? 0);
+  // Reports the draft's time and input method once, when the box goes away.
+  const leaveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    leaveRef.current = () => onLeave?.({ seconds: timer.elapsedNow(), typed, spoken });
+  });
+  useEffect(() => () => leaveRef.current(), []);
   // Reports each change without re-running when the parent passes a new callback on every render.
   const onTextChangeRef = useRef(onTextChange);
   useEffect(() => {

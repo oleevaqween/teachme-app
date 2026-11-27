@@ -35,3 +35,17 @@ describe('ReviewList', () => {
     expect(html).toContain('and 3 more');
   });
 });
+
+describe('ReviewList snooze', () => {
+  it('offers Snooze on each reminder, named for its stage', () => {
+    const html = renderToStaticMarkup(<ReviewList items={[item('s3', { kind: 'cards', count: 2 })]} total={1} onSnooze={() => {}} />);
+    expect(html).toContain('aria-label="Snooze Stage 3 · Title s3 for 3 days"');
+  });
+
+  it('offers Undo right after a snooze, even when nothing else is due', () => {
+    const html = renderToStaticMarkup(<ReviewList items={[]} total={0} snoozed={item('s3', { kind: 'cards', count: 2 })} onUndo={() => {}} />);
+    expect(html).toContain('Snoozed Stage 3 for 3 days.');
+    expect(html).toContain('Undo');
+    expect(html).toContain('Nothing else is due right now.');
+  });
+});

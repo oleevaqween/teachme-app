@@ -11,7 +11,7 @@ import {
   type CardView,
   type ReviewResult,
 } from '@/lib/teaching-session-engine/flashcards';
-import type { FlashcardsBusy, FlashcardsStatus } from './use-stage-flashcards';
+import type { CardDraft, FlashcardsBusy, FlashcardsStatus } from './use-stage-flashcards';
 
 type Answer = { ok: true } | { ok: false; error: string };
 
@@ -20,6 +20,9 @@ export type StageFlashcardsProps = {
   status: FlashcardsStatus;
   /** The action the hook is saving; buttons stay disabled while it runs, also after the popup is reopened. */
   busy?: FlashcardsBusy;
+  /** The half-typed card, held by the hook so it survives the popup closing. Without these the panel keeps its own. */
+  draft?: CardDraft | null;
+  setDraft?: (draft: CardDraft | null) => void;
   add: (front: string, back: string) => Promise<Answer>;
   edit: (id: string, front: string, back: string) => Promise<Answer>;
   remove: (id: string) => Promise<Answer>;
@@ -48,14 +51,23 @@ function nextDueLine(cards: readonly CardView[]): string {
 /** The Flashcards popup in the lesson header: review due cards, or add, edit, delete and make cards. */
 export function StageFlashcards(props: StageFlashcardsProps) {
   const { cards, status } = props;
-  const [tab, setTab] = useState<'review' | 'cards'>(props.initialTab ?? 'review');
+  // A half-typed card waiting from before the popup closed opens on its tab.
+  const [tab, setTab] = useState<'review' | 'cards'>(props.initialTab ?? (props.draft ? 'cards' : 'review'));
   // The answer shown belongs to one card, so another card never opens already answered.
   const [revealedId, setRevealedId] = useState<string | null>(
     props.initialRevealed ? (dueCards(props.cards, props.initialNow ?? new Date())[0]?.id ?? null) : null
   );
   const [now, setNow] = useState(() => props.initialNow ?? new Date());
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ id: string | null; front: string; back: string } | null>(null);
+  const [localDraft, setLocalDraft] = useState<CardDraft | null>(null);
+  const draft = props.setDraft ? (props.draft ?? null) : localDraft;
+  const setDraft = props.setDraft ?? setLocalDraft;
+  // Delete asks first: the id of the card waiting for "Delete" or "Keep".
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (confirmingId) keepRef.current?.focus();
+  }, [confirmingId]);
   const busy = props.busy ?? null;
 
   // After an action, focus goes to the control that replaces the one just used.
@@ -274,15 +286,37 @@ export function StageFlashcards(props: StageFlashcardsProps) {
                     >
                       Edit
                     </button>
-                    <button
-                      type="button"
-                      aria-label={`Delete card: ${card.front}`}
-                      disabled={busy !== null}
-                      className={cn('rounded-sm text-caption text-destructive underline-offset-2 hover:underline disabled:opacity-50', RING)}
-                      onClick={() => run(() => props.remove(card.id))}
-                    >
-                      Delete
-                    </button>
+                    {confirmingId === card.id ? (
+                      <span role="group" aria-label={`Delete card: ${card.front}?`} className="flex items-center gap-2 text-caption text-foreground">
+                        Delete this card?
+                        <button
+                          type="button"
+                          disabled={busy !== null}
+                          className={cn('rounded-sm font-medium text-destructive underline underline-offset-2 disabled:opacity-50', RING)}
+                          onClick={() => run(() => props.remove(card.id), () => setConfirmingId(null))}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          ref={keepRef}
+                          type="button"
+                          className={cn('rounded-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline', RING)}
+                          onClick={() => setConfirmingId(null)}
+                        >
+                          Keep
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-label={`Delete card: ${card.front}`}
+                        disabled={busy !== null}
+                        className={cn('rounded-sm text-caption text-destructive underline-offset-2 hover:underline disabled:opacity-50', RING)}
+                        onClick={() => setConfirmingId(card.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </li>
               )

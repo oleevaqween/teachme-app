@@ -4,9 +4,19 @@ import { useEffect, useState } from 'react';
 /** A spoken STAR answer usually fits in about two minutes. */
 export const TIMER_GUIDE_SECONDS = 120;
 
-export function useAnswerTimer() {
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [now, setNow] = useState(0);
+/** A start time that makes `seconds` already elapsed at `now`; null when nothing has elapsed yet. */
+export function resumedStart(now: number, seconds: number): number | null {
+  return seconds > 0 ? now - Math.min(3600, seconds) * 1000 : null;
+}
+
+/** Counts the draft's seconds from the first keystroke or the mic; `initialSeconds` resumes a returned-to draft. */
+export function useAnswerTimer(initialSeconds = 0) {
+  const [{ startedAt, now }, setClock] = useState(() => {
+    const t = Date.now();
+    return { startedAt: resumedStart(t, initialSeconds), now: t };
+  });
+  const setStartedAt = (value: number) => setClock((c) => ({ ...c, startedAt: value }));
+  const setNow = (value: number) => setClock((c) => ({ ...c, now: value }));
 
   useEffect(() => {
     if (startedAt === null) return;

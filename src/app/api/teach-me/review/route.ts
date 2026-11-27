@@ -5,14 +5,17 @@ import { prisma } from '@/lib/db/client';
 import { handleApiError } from '@/lib/errors';
 import { stageActivity } from '@/lib/progress-tracker/activity';
 import { readActivityRows } from '@/lib/progress-tracker/activity-rows';
-import { MAX_REMINDERS, reviewItems, type ReviewJourneyInput } from '@/lib/progress-tracker/review-reminders';
+import { reviewItems, type ReviewJourneyInput } from '@/lib/progress-tracker/review-reminders';
+
+/** Most reminders sent; the page leaves out snoozed ones (kept in the browser) and shows the first few. */
+const MAX_SENT = 50;
 
 const STATUSES = new Set(['locked', 'unlocked', 'in_progress', 'completed']);
 
 /**
  * GET /api/teach-me/review
  * Read-only: stages due for review across all interactive journeys, most urgent first.
- * Response: { items: ReviewItem[] (at most MAX_REMINDERS), total: number }
+ * Response: { items: ReviewItem[] (at most MAX_SENT), total: number }
  */
 export async function GET() {
   try {
@@ -64,7 +67,7 @@ export async function GET() {
     });
 
     const items = reviewItems(input, now);
-    return NextResponse.json({ items: items.slice(0, MAX_REMINDERS), total: items.length });
+    return NextResponse.json({ items: items.slice(0, MAX_SENT), total: items.length });
   } catch (error) {
     return handleApiError(error);
   }

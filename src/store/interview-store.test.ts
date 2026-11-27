@@ -39,3 +39,22 @@ describe('interview store attempts', () => {
     expect(useInterviewStore.getState().attempts).toEqual({});
   });
 });
+
+describe('interview store draft time', () => {
+  it('keeps a draft time and input method per answer box and clears it on request', () => {
+    const { setAnswerMeta } = useInterviewStore.getState();
+    setAnswerMeta('q1:main', { seconds: 45, typed: true, spoken: false });
+    expect(useInterviewStore.getState().answerMeta['q1:main']).toEqual({ seconds: 45, typed: true, spoken: false });
+    setAnswerMeta('q1:main', null);
+    expect(useInterviewStore.getState().answerMeta).toEqual({});
+  });
+
+  it('clears draft times with the answers when new questions load or on reset', () => {
+    useInterviewStore.getState().setAnswerMeta('q1:main', { seconds: 45, typed: true, spoken: false });
+    useInterviewStore.getState().setQuestions([]);
+    expect(useInterviewStore.getState().answerMeta).toEqual({});
+    useInterviewStore.getState().setAnswerMeta('q1:main', { seconds: 5, typed: true, spoken: false });
+    useInterviewStore.getState().reset();
+    expect(useInterviewStore.getState().answerMeta).toEqual({});
+  });
+});
