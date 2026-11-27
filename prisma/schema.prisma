@@ -1,0 +1,119 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model LLMProviderSettings {
+  id        String   @id @default(cuid())
+  type      String   // 'openai' | 'anthropic' | 'ollama-cloud' | 'ollama-local'
+  apiKey    String?  // encrypted, never displayed after entry
+  baseUrl   String?
+  model     String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ArchivedQuestion {
+  id         String   @id @default(cuid())
+  role       String
+  question   String
+  userAnswer String
+  score      Int      // 1-10
+  archivedAt DateTime @default(now())
+
+  @@index([role])
+}
+
+model Journey {
+  id            String           @id @default(cuid())
+  topic         String
+  createdAt     DateTime         @default(now())
+  isInteractive Boolean          @default(true)
+  sections      JourneySection[]
+  stages        Stage[]
+  progress      StageProgress[]
+}
+
+model JourneySection {
+  id              String  @id @default(cuid())
+  journeyId       String
+  title           String
+  content         String
+  order           Int
+  sourceTag       String  // 'Document-sourced' | 'Internet-sourced'
+  confidenceLevel String? // 'High' | 'Medium' | 'Low'
+  attributionName String?
+  attributionUrl  String?
+  quizData        String? // JSON-serialized Quiz
+  journey         Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
+}
+
+// New models for interactive journey
+
+model Stage {
+  id            String            @id @default(cuid())
+  journeyId     String
+  title         String
+  summary       String
+  theme         String
+  order         Int
+  topicsCovered String            // JSON array of topic strings
+  journey       Journey           @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  chunks        ContentChunk[]
+  messages      TeachingMessage[]
+  progress      StageProgress?
+
+  @@index([journeyId])
+  @@unique([journeyId, order])
+}
+
+model ContentChunk {
+  id             String @id @default(cuid())
+  stageId        String
+  journeyId      String
+  content        String
+  sourceDocument String
+  sourceSection  String
+  order          Int
+  wordCount      Int
+  stage          Stage  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+  @@index([journeyId])
+}
+
+model TeachingMessage {
+  id          String   @id @default(cuid())
+  stageId     String
+  journeyId   String
+  role        String
+  content     String
+  sources     String?
+  messageType String   @default("qa")
+  createdAt   DateTime @default(now())
+  stage       Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+  @@index([journeyId, stageId])
+}
+
+model StageProgress {
+  id          String    @id @default(cuid())
+  stageId     String    @unique
+  journeyId   String
+  status      String    // 'locked' | 'unlocked' | 'in_progress' | 'completed'
+  completedAt DateTime?
+  stage       Stage     @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  journey     Journey   @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId])
+  @@unique([journeyId, stageId])
+}
