@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Loader2, RotateCcw, Search } from 'lucide-react';
+import { FileUp, Loader2, RotateCcw, Search } from 'lucide-react';
 import {
   backupDateLabel, kindLabels, MAX_FILE_BYTES, RELOAD_TABS, RESTORE_KINDS, SCREENING_LABEL, screeningOutcomeText, TOO_LARGE,
   type RestoreResultView, type RestoreView,
@@ -106,13 +106,17 @@ export function RestoreCard() {
         Brings back CVs, saved versions, tracked applications and practice history from a backup file. Only what is missing is added; nothing already in the app is changed or removed, and a safety copy of your current data is made first.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <input type="file" accept=".json,application/json" aria-label="Backup file" disabled={busy}
-          onChange={e => { setFile(e.target.files?.[0] ?? null); setView(null); setResult(null); setError(''); }}
-          className="text-small text-muted-foreground file:mr-3 file:rounded-lg file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:text-small file:text-foreground" />
+        {/* The browser's own picker ("Choose File / No file chosen") is hidden behind this button-looking label. */}
+        <label className={`relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-2 text-small font-medium text-foreground hover:bg-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+          <FileUp className="size-4" aria-hidden="true" />{file ? 'Choose a different backup file' : 'Choose backup file'}
+          <input type="file" accept=".json,application/json" disabled={busy} className="sr-only"
+            onChange={e => { const chosen = e.target.files?.[0]; e.target.value = ''; if (!chosen) return; setFile(chosen); setView(null); setResult(null); setError(''); }} />
+        </label>
         <button type="button" onClick={() => void check()} disabled={busy || !file}
           className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-small font-medium text-foreground hover:bg-accent disabled:opacity-50">
           {busy && !view ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Search className="size-4" aria-hidden="true" />}Check file</button>
       </div>
+      {file && <p className="mt-2 break-all text-small text-muted-foreground">Chosen: {file.name}</p>}
       {view && <RestoreCheck view={view} busy={busy} onRestore={() => void restore()} />}
       {result && <RestoreDone result={result} />}
       {error && <p role="alert" className="mt-3 text-small text-destructive">{error}</p>}

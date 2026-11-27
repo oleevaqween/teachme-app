@@ -217,8 +217,11 @@
 .version-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 0;border-bottom:1px solid var(--border)}
 .version-row strong{font-size:var(--text-body);display:block;line-height:var(--text-body--line-height)}
 .version-row small{font-size:var(--text-caption);color:var(--muted-foreground);display:block;margin-top:6px;line-height:var(--text-caption--line-height)}
-.backup-import{font-size:var(--text-small);color:var(--muted-foreground);display:block;margin-top:20px;line-height:var(--text-small--line-height)}
-.backup-import input{display:block;margin-top:8px;width:100%;font-size:var(--text-small);line-height:var(--text-small--line-height)}
+.backup-import{margin-top:20px}
+/* A button-looking label for a hidden file input: the browser's own "Choose File / No file chosen" control is not shown. */
+.file-pick{position:relative;display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--foreground);font-size:var(--text-small);font-weight:600;line-height:var(--text-small--line-height);cursor:pointer}
+.file-pick:hover{background:var(--accent);color:var(--accent-foreground)}
+.file-pick:has(input:focus-visible){outline:2px solid var(--ring);outline-offset:3px}
 
 .studio-modal-backdrop{position:fixed;z-index:70;inset:0;background:oklch(0 0 0 / .5);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:24px}
 .studio-modal{background:var(--card);color:var(--foreground);border-radius:12px;max-width:680px;width:100%;max-height:90vh;overflow:auto;padding:var(--space-panel-block) var(--space-panel-inline);box-shadow:0 20px 100px oklch(0 0 0 / .3)}
@@ -233,10 +236,15 @@
 .icon-button.danger:hover{background:color-mix(in oklch,var(--destructive) 12%,transparent);color:var(--destructive)}
 .delete-dialog{max-width:560px}
 .delete-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:24px}
-.upload-zone{display:flex;flex-direction:column;gap:12px;align-items:center;border:1px dashed var(--border);background:var(--muted);padding:28px;margin:24px 0;border-radius:8px;cursor:pointer}
+.upload-zone{position:relative;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;border:1px dashed var(--border);background:var(--muted);padding:28px;margin:24px 0;border-radius:8px;cursor:pointer}
+.upload-zone:hover,.upload-zone.dragging{border-color:var(--primary)}
+.upload-zone.dragging{background:color-mix(in oklch,var(--primary) 8%,var(--muted))}
+.upload-zone:has(input:focus-visible){outline:2px solid var(--ring);outline-offset:3px}
+.upload-zone:has(input:disabled){cursor:default;opacity:.7}
 .upload-zone strong{font-size:var(--text-body);overflow-wrap:anywhere;line-height:var(--text-body--line-height)}
 .upload-zone span{font-size:var(--text-small);color:var(--muted-foreground);line-height:var(--text-small--line-height)}
-.upload-zone input{font-size:var(--text-small);width:100%;max-width:290px;line-height:var(--text-small--line-height)}
+.upload-zone .upload-browse{margin-top:4px;padding:8px 16px;border:1px solid var(--border);border-radius:7px;background:var(--background);color:var(--foreground);font-weight:600}
+.upload-zone:hover .upload-browse{background:var(--accent);color:var(--accent-foreground)}
 .source-text{font-family:monospace;font-size:var(--text-caption);line-height:var(--text-caption--line-height);white-space:pre-wrap;max-height:220px;overflow:auto;padding:16px;background:var(--muted)}
 .text-button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;max-width:100%;padding:6px 12px;border:1px solid color-mix(in oklch,var(--primary) 45%,transparent);border-radius:999px;background:color-mix(in oklch,var(--primary) 10%,transparent);color:var(--primary);font-size:var(--text-caption);font-weight:600;text-decoration:none;line-height:var(--text-caption--line-height)}
 button.text-button:hover:not(:disabled){background:color-mix(in oklch,var(--primary) 18%,transparent)}
