@@ -4,6 +4,16 @@ import { HeaderPopover, escapeShouldRefocus, popoverNextOpen } from './HeaderPop
 import { StageTopics, topicCount } from './StageTopics';
 import { StageSources, hasSources } from './StageSources';
 
+describe('HeaderPopover alignment', () => {
+  it('opens from the right edge by default and from the left edge with align="start"', () => {
+    const end = renderToStaticMarkup(<HeaderPopover label="T" id="p" initialOpen><p>x</p></HeaderPopover>);
+    expect(end).toContain('sm:right-0');
+    const start = renderToStaticMarkup(<HeaderPopover label="T" id="p" align="start" initialOpen><p>x</p></HeaderPopover>);
+    expect(start).toContain('sm:left-0');
+    expect(start).not.toContain('sm:right-0');
+  });
+});
+
 describe('HeaderPopover markup', () => {
   it('renders closed: a labelled button, aria-expanded false, no panel', () => {
     const html = renderToStaticMarkup(

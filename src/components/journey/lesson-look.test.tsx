@@ -116,11 +116,17 @@ describe('compact lesson controls', () => {
     expect(html.match(/leading-4/g)?.length).toBeGreaterThanOrEqual(5);
   });
 
-  it('keeps the lesson header on one row with a popup for topics and sources', () => {
+  it('gives the title its own row and puts the lesson tools on a row under it (option 5)', () => {
     const src = readFileSync('src/components/journey/TeachingSession.tsx', 'utf8');
-    expect(src).toContain('flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5');
+    // Row 1: Back and the full-width title, never cut to one line; a very long title wraps to two.
+    expect(src).toContain('data-header-row="title"');
     expect(src).toContain('title={stageTitle}');
-    expect(src).toContain('sm:truncate');
+    expect(src).not.toContain('sm:truncate');
+    expect(src).toContain('line-clamp-2');
+    // Row 2: the tools, lined up with the title, Reset at the end; popups open from their left edge.
+    expect(src).toContain('data-header-row="tools"');
+    expect(src).toContain('sm:pl-16');
+    expect(src).toContain('align="start"');
     expect(src).toContain('<HeaderPopover');
     expect(src).not.toContain('CheckFirstPrompt');
     expect(src).not.toContain('Complete Stage button */}');

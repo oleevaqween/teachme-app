@@ -383,63 +383,66 @@ export function TeachingSession({
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="border-b border-border">
-        <div className={cn(COLUMN, 'relative flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5')}>
-          <button
-            onClick={onBack}
-            className="flex shrink-0 items-center gap-1 rounded-md text-small text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Back to journey map"
-          >
-            <ArrowLeft className="size-4" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
-
-          <h2
-            className="min-w-0 flex-1 basis-full line-clamp-2 text-h3 text-foreground sm:basis-0 sm:line-clamp-none sm:truncate sm:text-h2"
-            title={stageTitle}
-          >
-            {stageTitle}
-          </h2>
-
-          {topicCount(topicsCovered) > 0 && (
-            <HeaderPopover
-              id="lesson-topics"
-              label={`${topicCount(topicsCovered)} ${topicCount(topicsCovered) === 1 ? 'topic' : 'topics'}`}
+        {/* Two rows: the title gets the whole first row (never cut to one line), the lesson tools sit under it. */}
+        <div className={cn(COLUMN, 'relative py-2.5')}>
+          <div data-header-row="title" className="flex items-start gap-3">
+            <button
+              onClick={onBack}
+              className="mt-1.5 flex shrink-0 items-center gap-1 rounded-md text-small text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Back to journey map"
             >
-              <StageTopics topics={topicsCovered} />
-            </HeaderPopover>
-          )}
-          {stageSources && hasSources(stageSources) && (
-            <HeaderPopover id="lesson-sources" label="Sources">
-              <StageSources sources={stageSources} />
-            </HeaderPopover>
-          )}
-          <HeaderPopover id="lesson-notes" label="Notes">
-            <StageNotes
-              text={note.text}
-              status={note.status}
-              onChange={note.change}
-              onRetrySave={note.retrySave}
-              onReload={note.reload}
-            />
-          </HeaderPopover>
-          <HeaderPopover id="lesson-flashcards" label={flashcards.dueCount ? `Flashcards (${flashcards.dueCount})` : 'Flashcards'}>
-            <StageFlashcards {...flashcards} />
-          </HeaderPopover>
-
-          <button
-            onClick={handleResetConversation}
-            disabled={isResetting || status === 'streaming'}
-            className={cn(
-              'flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-small font-medium transition-colors',
-              'text-muted-foreground hover:text-foreground hover:bg-muted',
-              'disabled:opacity-50 disabled:cursor-not-allowed'
+              <ArrowLeft className="size-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+            <h2
+              className="min-w-0 flex-1 line-clamp-2 text-h3 text-foreground sm:text-h2"
+              title={stageTitle}
+            >
+              {stageTitle}
+            </h2>
+          </div>
+          <div data-header-row="tools" className="mt-1.5 flex flex-wrap items-center gap-2 sm:pl-16">
+            {topicCount(topicsCovered) > 0 && (
+              <HeaderPopover
+                align="start"
+                id="lesson-topics"
+                label={`${topicCount(topicsCovered)} ${topicCount(topicsCovered) === 1 ? 'topic' : 'topics'}`}
+              >
+                <StageTopics topics={topicsCovered} />
+              </HeaderPopover>
             )}
-            aria-label="Reset conversation"
-            title="Reset conversation"
-          >
-            <RotateCcw className={cn('size-3.5', isResetting && 'animate-spin')} />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
+            {stageSources && hasSources(stageSources) && (
+              <HeaderPopover align="start" id="lesson-sources" label="Sources">
+                <StageSources sources={stageSources} />
+              </HeaderPopover>
+            )}
+            <HeaderPopover align="start" id="lesson-notes" label="Notes">
+              <StageNotes
+                text={note.text}
+                status={note.status}
+                onChange={note.change}
+                onRetrySave={note.retrySave}
+                onReload={note.reload}
+              />
+            </HeaderPopover>
+            <HeaderPopover align="start" id="lesson-flashcards" label={flashcards.dueCount ? `Flashcards (${flashcards.dueCount})` : 'Flashcards'}>
+              <StageFlashcards {...flashcards} />
+            </HeaderPopover>
+            <button
+              onClick={handleResetConversation}
+              disabled={isResetting || status === 'streaming'}
+              className={cn(
+                'ml-auto flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-small font-medium transition-colors',
+                'text-muted-foreground hover:text-foreground hover:bg-muted',
+                'disabled:opacity-50 disabled:cursor-not-allowed'
+              )}
+              aria-label="Reset conversation"
+              title="Reset conversation"
+            >
+              <RotateCcw className={cn('size-3.5', isResetting && 'animate-spin')} />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          </div>
         </div>
       </div>
 

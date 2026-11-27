@@ -41,11 +41,14 @@ export function HeaderPopover({
   label,
   children,
   id,
+  align = 'end',
   initialOpen = false,
 }: {
   label: string;
   children: ReactNode;
   id: string;
+  /** Which edge of the button the panel lines up with from `sm` up: the right edge (end) or the left edge (start). */
+  align?: 'start' | 'end';
   initialOpen?: boolean;
 }) {
   const [open, setOpen] = useState(initialOpen);
@@ -104,7 +107,7 @@ export function HeaderPopover({
           id={id}
           className={cn(
             'absolute inset-x-4 top-full z-20 mt-1 max-h-72 overflow-y-auto sm:inset-x-auto sm:w-[22rem]',
-            'sm:right-0',
+            align === 'start' ? 'sm:left-0' : 'sm:right-0',
             'rounded-lg border border-border bg-card p-3 text-foreground shadow-lg'
           )}
         >
