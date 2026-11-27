@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BookOpen, Sparkles, Loader2, Clock, ChevronRight, Trash2, Map, FileText, Check, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/documents/FileUploader";
+import { ReviewReminders } from "@/components/journey/ReviewReminders";
 import { useJourneyStore } from "@/store/journey-store";
 import { validateTopic } from "@/lib/validators/topic";
 import { clearLearningHandoff, loadLearningHandoff } from "@/lib/cv-studio/learning-handoff";
@@ -296,6 +297,8 @@ export default function TeachMePage() {
           personalized learning journey.
         </p>
       </div>
+
+      <ReviewReminders />
 
       {learningHandoff && (
         <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-small" role="status">

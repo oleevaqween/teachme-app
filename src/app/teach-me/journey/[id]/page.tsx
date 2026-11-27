@@ -50,16 +50,18 @@ export default function JourneyPage() {
 
   const journeyId = params.id as string;
 
-  const fetchProgress = useCallback(async () => {
+  const fetchProgress = useCallback(async (): Promise<JourneyProgress | null> => {
     try {
       const response = await fetch(`/api/journey/${journeyId}/progress`);
       if (response.ok) {
         const data: JourneyProgress = await response.json();
         setProgress(data);
+        return data;
       }
     } catch {
       // Non-critical: progress will show default state
     }
+    return null;
   }, [journeyId]);
 
   const fetchActivity = useCallback(async () => {
@@ -121,7 +123,8 @@ export default function JourneyPage() {
 
       // If interactive, also fetch progress and the latest lesson activity
       if (data.isInteractive) {
-        await Promise.all([fetchProgress(), fetchActivity()]);
+        const [loadedProgress] = await Promise.all([fetchProgress(), fetchActivity()]);
+        openLinkedStage(data, loadedProgress);
       }
     } catch {
       setError(
@@ -130,6 +133,21 @@ export default function JourneyPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * A link such as a "Due for review" reminder (?stage=ID) opens that stage straight away when it belongs to
+   * this journey and is not known to be locked (if progress could not be read, it still opens: reminders never
+   * list locked stages and the server refuses them); the address is then tidied so a refresh shows the map.
+   */
+  function openLinkedStage(data: InteractiveJourneyData, loadedProgress: JourneyProgress | null) {
+    const url = new URL(window.location.href);
+    const stageId = url.searchParams.get("stage");
+    if (!stageId) return;
+    url.searchParams.delete("stage");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    const status = loadedProgress?.stages.find((s) => s.stageId === stageId)?.status;
+    if (data.stages.some((s) => s.id === stageId) && status !== "locked") setActiveStageId(stageId);
   }
 
   function handleStageClick(stageId: string) {
