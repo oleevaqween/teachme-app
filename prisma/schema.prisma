@@ -73,6 +73,7 @@ model Stage {
   note          StageNote?
   studyTime     StageStudyTime?
   checkResults  CheckResult[]
+  flashcards    Flashcard[]
 
   @@index([journeyId])
   @@unique([journeyId, order])
@@ -162,4 +163,24 @@ model CheckResult {
 
   @@index([stageId])
   @@index([journeyId])
+}
+
+// A question-and-answer card for a stage, made by the AI from the stage material or by the learner.
+// Reviewed on a simple schedule: box 0 (new or just missed) to 5, each "Got it" moves it up a box and further out (dueAt).
+model Flashcard {
+  id             String    @id @default(cuid())
+  stageId        String
+  journeyId      String
+  front          String
+  back           String
+  source         String    @default("own") // 'ai' | 'own'
+  box            Int       @default(0)
+  dueAt          DateTime  @default(now())
+  lastReviewedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  stage          Stage     @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([stageId])
+  @@index([journeyId, dueAt])
 }

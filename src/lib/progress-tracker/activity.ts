@@ -13,6 +13,8 @@ export interface StageActivity {
   studySeconds?: number;
   /** The stage's most recent check score; absent or null when it has none. */
   lastCheck?: { correct: number; total: number } | null;
+  /** Flashcards due now; absent counts as 0. */
+  dueCards?: number;
 }
 
 /** Activity as the journey map uses it: per-stage times plus the moment they were read. */
@@ -29,8 +31,10 @@ export function stageActivity(
   stageIds: readonly string[],
   latest: readonly { stageId: string; at: Date | null }[],
   study: readonly { stageId: string; seconds: number; lastStudiedAt?: Date | null }[] = [],
-  checks: readonly { stageId: string; correct: number; total: number; createdAt: Date }[] = []
+  checks: readonly { stageId: string; correct: number; total: number; createdAt: Date }[] = [],
+  due: readonly { stageId: string; count: number }[] = []
 ): StageActivity[] {
+  const dueByStage = new Map(due.map((row) => [row.stageId, row.count]));
   const lastCheck = new Map<string, { correct: number; total: number; at: number }>();
   for (const row of checks) {
     const known = lastCheck.get(row.stageId);
@@ -51,6 +55,7 @@ export function stageActivity(
       lastStudiedAt: at ? at.toISOString() : null,
       studySeconds: row?.seconds ?? 0,
       lastCheck: check ? { correct: check.correct, total: check.total } : null,
+      dueCards: dueByStage.get(stageId) ?? 0,
     };
   });
 }
@@ -61,7 +66,7 @@ export function parseActivity(data: unknown): StageActivity[] | null {
   const stages: StageActivity[] = [];
   for (const item of (data as { stages: unknown[] }).stages) {
     if (!item || typeof item !== 'object') return null;
-    const { stageId, lastStudiedAt, studySeconds, lastCheck } = item as Record<string, unknown>;
+    const { stageId, lastStudiedAt, studySeconds, lastCheck, dueCards } = item as Record<string, unknown>;
     if (typeof stageId !== 'string') return null;
     if (lastStudiedAt !== null && (typeof lastStudiedAt !== 'string' || Number.isNaN(Date.parse(lastStudiedAt)))) return null;
     if (studySeconds !== undefined && (typeof studySeconds !== 'number' || !Number.isFinite(studySeconds) || studySeconds < 0)) return null;
@@ -71,7 +76,8 @@ export function parseActivity(data: unknown): StageActivity[] | null {
       if (!Number.isInteger(correct) || !Number.isInteger(total) || (total as number) < 1 || (correct as number) < 0 || (correct as number) > (total as number)) return null;
       check = { correct: correct as number, total: total as number };
     }
-    stages.push({ stageId, lastStudiedAt, studySeconds: studySeconds ?? 0, lastCheck: check });
+    if (dueCards !== undefined && (!Number.isInteger(dueCards) || (dueCards as number) < 0)) return null;
+    stages.push({ stageId, lastStudiedAt, studySeconds: studySeconds ?? 0, lastCheck: check, dueCards: (dueCards as number | undefined) ?? 0 });
   }
   return stages;
 }

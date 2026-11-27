@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { READING_COLUMN as COLUMN } from './reading-width';
 import { HeaderPopover } from './HeaderPopover';
 import { StageNotes } from './StageNotes';
+import { StageFlashcards } from './StageFlashcards';
+import { useStageFlashcards } from './use-stage-flashcards';
 import { useStageNote } from './use-stage-note';
 import { useStudyTime } from './use-study-time';
 import { ArrowLeft, Send, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react';
@@ -57,6 +59,7 @@ export function TeachingSession({
   const [loadingPhrase, setLoadingPhrase] = useState<string>('');
   const [stageSources, setStageSources] = useState<StageSourceList | null>(null);
   const note = useStageNote(journeyId, stageId);
+  const flashcards = useStageFlashcards(journeyId, stageId);
   useStudyTime(journeyId, stageId, status === 'streaming' || status === 'initializing');
 
   const { streamingMessage, setStreamingMessage, clearStageMessages } =
@@ -418,6 +421,9 @@ export function TeachingSession({
               onRetrySave={note.retrySave}
               onReload={note.reload}
             />
+          </HeaderPopover>
+          <HeaderPopover id="lesson-flashcards" label={flashcards.dueCount ? `Flashcards (${flashcards.dueCount})` : 'Flashcards'}>
+            <StageFlashcards {...flashcards} />
           </HeaderPopover>
 
           <button

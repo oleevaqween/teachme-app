@@ -5,6 +5,7 @@ import type { JourneyProgress, StageProgress } from '@/lib/progress-tracker';
 import { lastStudiedLabel, resumeTarget, type JourneyActivity } from '@/lib/progress-tracker/activity';
 import { studyTimeLabel, totalStudyLabel } from '@/lib/progress-tracker/study-time';
 import { checkScoreLabel } from '@/lib/teaching-session-engine/check-score';
+import { dueLabel } from '@/lib/teaching-session-engine/flashcards';
 import { CheckCircle2, Lock, Circle, Play } from 'lucide-react';
 
 export interface JourneyStage {
@@ -221,16 +222,21 @@ export function JourneyMap({ stages, progress, onStageClick, activity }: Journey
   const studiedAt = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.lastStudiedAt]));
   const studySeconds = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.studySeconds ?? 0]));
   const lastChecks = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.lastCheck ?? null]));
+  const dueByStage = new Map((activity?.stages ?? []).map((a) => [a.stageId, a.dueCards ?? 0]));
   const totalLabel = activity ? totalStudyLabel(activity.stages.map((a) => a.studySeconds ?? 0)) : null;
 
-  /** "Last studied yesterday · 25 min · Last check 3/4", any part left out when unknown; undefined without any. */
+  /** "Last studied yesterday · 25 min · Last check 3/4 · 2 cards due", any part left out when unknown; undefined without any. */
   const studiedLine = (stageId: string): string | undefined => {
     if (!activity) return undefined;
     const at = studiedAt.get(stageId);
     const time = studyTimeLabel(studySeconds.get(stageId) ?? 0);
     const date = at ? lastStudiedLabel(new Date(at), activity.now) : null;
     const check = lastChecks.get(stageId);
-    const parts = [date && time ? `${date} · ${time}` : (date ?? (time ? `Studied ${time}` : null)), check ? checkScoreLabel(check) : null];
+    const parts = [
+      date && time ? `${date} · ${time}` : (date ?? (time ? `Studied ${time}` : null)),
+      check ? checkScoreLabel(check) : null,
+      dueLabel(dueByStage.get(stageId) ?? 0),
+    ];
     const line = parts.filter(Boolean).join(' · ');
     return line || undefined;
   };

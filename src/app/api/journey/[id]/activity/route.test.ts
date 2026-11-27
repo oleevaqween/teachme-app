@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mock = vi.hoisted(() => ({ journey: vi.fn(), stages: vi.fn(), groupBy: vi.fn(), study: vi.fn(), checks: vi.fn() }));
+const mock = vi.hoisted(() => ({ journey: vi.fn(), stages: vi.fn(), groupBy: vi.fn(), study: vi.fn(), checks: vi.fn(), due: vi.fn() }));
 // Only read methods exist on this fake, so any write would throw; no database is opened.
 vi.mock('@/lib/db/client', () => ({
   prisma: {
@@ -8,6 +8,7 @@ vi.mock('@/lib/db/client', () => ({
     teachingMessage: { groupBy: mock.groupBy },
     stageStudyTime: { findMany: mock.study },
     checkResult: { findMany: mock.checks },
+    flashcard: { groupBy: mock.due },
   },
 }));
 import { GET } from './route';
@@ -25,6 +26,7 @@ describe('GET /api/journey/[id]/activity', () => {
       { stageId: 's1', _max: { createdAt: new Date('2026-11-17T08:00:00.000Z') } },
     ]);
     mock.study.mockResolvedValue([{ stageId: 's2', seconds: 1500 }]);
+    mock.due.mockResolvedValue([{ stageId: 's3', _count: { _all: 2 } }]);
     mock.checks.mockResolvedValue([{ stageId: 's1', correct: 3, total: 4, createdAt: new Date('2026-11-17T09:00:00.000Z') }]);
   });
 
@@ -33,9 +35,9 @@ describe('GET /api/journey/[id]/activity', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       stages: [
-        { stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0, lastCheck: { correct: 3, total: 4 } },
-        { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 1500, lastCheck: null },
-        { stageId: 's3', lastStudiedAt: null, studySeconds: 0, lastCheck: null },
+        { stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0, lastCheck: { correct: 3, total: 4 }, dueCards: 0 },
+        { stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 1500, lastCheck: null, dueCards: 0 },
+        { stageId: 's3', lastStudiedAt: null, studySeconds: 0, lastCheck: null, dueCards: 2 },
       ],
     });
     expect(mock.stages).toHaveBeenCalledWith({ where: { journeyId: 'j1' }, select: { id: true }, orderBy: { order: 'asc' } });
@@ -70,8 +72,20 @@ describe('GET /api/journey/[id]/activity', () => {
     const response = await call('j1');
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.stages[1]).toEqual({ stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 1500, lastCheck: null });
+    expect(body.stages[1]).toEqual({ stageId: 's2', lastStudiedAt: '2026-11-18T10:00:00.000Z', studySeconds: 1500, lastCheck: null, dueCards: 0 });
     expect(body.stages[0].lastCheck).toBeNull();
+  });
+
+  it('counts flashcards due now, read-only, and shows none on a database without the table', async () => {
+    await call('j1');
+    const args = mock.due.mock.calls[0][0];
+    expect(args.by).toEqual(['stageId']);
+    expect(args.where.journeyId).toBe('j1');
+    expect(args.where.dueAt.lte).toBeInstanceOf(Date);
+    mock.due.mockRejectedValue(new Error('SQLITE_ERROR: no such table: main.Flashcard'));
+    const body = await (await call('j1')).json();
+    expect(body.stages.map((s: { dueCards: number }) => s.dueCards)).toEqual([0, 0, 0]);
+    expect(body.stages[0].lastStudiedAt).toBe('2026-11-17T08:00:00.000Z');
   });
 
   it('reports 0 seconds when the database has no study time table yet', async () => {
@@ -88,7 +102,7 @@ describe('GET /api/journey/[id]/activity', () => {
     const response = await call('j1');
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.stages[0]).toEqual({ stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0, lastCheck: { correct: 3, total: 4 } });
+    expect(body.stages[0]).toEqual({ stageId: 's1', lastStudiedAt: '2026-11-17T08:00:00.000Z', studySeconds: 0, lastCheck: { correct: 3, total: 4 }, dueCards: 0 });
     expect(quiet).toHaveBeenCalled();
     quiet.mockRestore();
   });

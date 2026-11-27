@@ -111,3 +111,20 @@ describe('journey map: check scores', () => {
     expect(html.match(/Last check/g)).toHaveLength(2);
   });
 });
+
+describe('journey map: flashcards due', () => {
+  it('adds the due count to the line', () => {
+    const withDue: JourneyActivity = {
+      now: activity.now,
+      stages: [
+        { stageId: 's1', lastStudiedAt: new Date(2026, 10, 18, 9, 0).toISOString(), studySeconds: 0, lastCheck: { correct: 3, total: 4 }, dueCards: 2 },
+        { stageId: 's2', lastStudiedAt: null, studySeconds: 0, lastCheck: null, dueCards: 1 },
+        { stageId: 's3', lastStudiedAt: null, studySeconds: 0, lastCheck: null, dueCards: 0 },
+      ],
+    };
+    const html = render(progress(['completed', 'in_progress', 'unlocked']), withDue);
+    expect(html).toContain('Last studied yesterday · Last check 3/4 · 2 cards due');
+    expect(html).toContain('>1 card due<');
+    expect(html.match(/due</g)).toHaveLength(2);
+  });
+});
